@@ -1,0 +1,58 @@
+# SO / editor / IDE
+*.log
+.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.phpunit.cache
+/.zed
+.phpunit.result.cache
+.phpactor.json
+auth.json
+
+# Entornos
+.env
+.env.*
+!.env.example
+.env.backup
+.env.production
+
+# Dependencias
+/node_modules
+/vendor
+
+# Builds (Vite / Mix) y archivos generados
+/public/build
+/public/hot
+/public/mix-manifest.json
+
+# Storage (claves, pail, caches) y symlink público
+/storage/*.key
+/storage/pail
+/storage/debugbar
+/storage/logs
+/storage/framework/*
+!/storage/framework/.gitignore
+/public/storage
+
+# Subidas de imágenes (ajusta rutas según tu app)
+public/uploads/
+public/images/uploads/
+storage/app/public/
+storage/app/private/
+
+# (opcional) Ignora screenshots o dumps locales
+/tmp/
+*.sql
+*.sqlite
+
+# Homestead (si aplica)
+Homestead.json
+Homestead.yaml
+
+composer.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

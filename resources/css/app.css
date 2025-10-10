@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====== Skin profesional para DataTables con Tailwind ====== */
+@layer components {
+
+    /* Contenedor principal */
+    .dataTables_wrapper {
+        @apply text-sm text-gray-700;
+    }
+
+    /* Card contenedor */
+    .dt-card {
+        @apply bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden;
+    }
+
+    .dt-card .dataTables_wrapper {
+        @apply p-4;
+    }
+
+    /* Controles superiores: length y filter */
+    .dataTables_length {
+        @apply flex items-center gap-2;
+    }
+
+    .dataTables_length label {
+        @apply flex items-center gap-2 text-sm text-gray-700 font-medium;
+    }
+
+    .dataTables_length select {
+        @apply px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-colors;
+    }
+
+    .dataTables_filter {
+        @apply flex items-center gap-2;
+    }
+
+    .dataTables_filter label {
+        @apply flex items-center gap-2 text-sm text-gray-700 font-medium;
+    }
+
+    .dataTables_filter input {
+        @apply px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-colors placeholder:text-gray-400;
+    }
+
+    /* Tabla */
+    table.dataTable {
+        @apply w-full border-collapse text-sm;
+        border-spacing: 0;
+    }
+
+    /* Encabezados */
+    table.dataTable thead th {
+        @apply bg-gray-50 text-gray-700 font-semibold text-left border-b border-gray-200;
+        padding: 12px 16px;
+    }
+
+    table.dataTable thead th.sorting,
+    table.dataTable thead th.sorting_asc,
+    table.dataTable thead th.sorting_desc {
+        @apply cursor-pointer select-none;
+        position: relative;
+        padding-right: 30px;
+    }
+
+    /* Flechas de ordenamiento - Estado normal (ambas flechas grises) */
+    table.dataTable thead th.sorting:before,
+    table.dataTable thead th.sorting_asc:before,
+    table.dataTable thead th.sorting_desc:before {
+        content: '';
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%) translateY(-3px);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-bottom: 5px solid #d1d5db;
+        opacity: 0.3;
+    }
+
+    table.dataTable thead th.sorting:after,
+    table.dataTable thead th.sorting_asc:after,
+    table.dataTable thead th.sorting_desc:after {
+        content: '';
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%) translateY(3px);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid #d1d5db;
+        opacity: 0.3;
+    }
+
+    /* Flecha ascendente activa */
+    table.dataTable thead th.sorting_asc:before {
+        border-bottom-color: #059669;
+        opacity: 1;
+    }
+
+    /* Flecha descendente activa */
+    table.dataTable thead th.sorting_desc:after {
+        border-top-color: #059669;
+        opacity: 1;
+    }
+
+    /* Celdas del cuerpo */
+    table.dataTable tbody td {
+        @apply border-b border-gray-100;
+        padding: 12px 16px;
+    }
+
+    /* Filas alternadas */
+    table.dataTable.stripe tbody tr:nth-child(odd),
+    table.dataTable.display tbody tr:nth-child(odd) {
+        @apply bg-white;
+    }
+
+    table.dataTable.stripe tbody tr:nth-child(even),
+    table.dataTable.display tbody tr:nth-child(even) {
+        @apply bg-gray-50/50;
+    }
+
+    /* Hover en filas */
+    table.dataTable.hover tbody tr:hover,
+    table.dataTable.display tbody tr:hover {
+        @apply bg-emerald-50/40;
+    }
+
+    /* Información de registros */
+    .dataTables_info {
+        @apply text-sm text-gray-600;
+    }
+
+    /* Paginación */
+    .dataTables_paginate {
+        @apply flex items-center gap-1;
+    }
+
+    .dataTables_paginate .paginate_button {
+        @apply inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors cursor-pointer;
+    }
+
+    .dataTables_paginate .paginate_button.current {
+        @apply bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700;
+    }
+
+    .dataTables_paginate .paginate_button.disabled {
+        @apply opacity-40 cursor-not-allowed hover:bg-white pointer-events-none;
+    }
+
+    .dataTables_paginate .paginate_button:active {
+        @apply outline-none;
+    }
+
+    /* Estado vacío */
+    .dataTables_empty {
+        @apply text-center text-gray-500 py-8;
+    }
+
+    /* Procesamiento/loading */
+    .dataTables_processing {
+        @apply absolute inset-0 flex items-center justify-center bg-white/80 text-gray-700 font-medium;
+    }
+
+    /* Wrapper responsivo para la tabla */
+    .dt-table-wrapper {
+        @apply -mx-4 px-4 overflow-x-auto;
+    }
+
+    @media (min-width: 640px) {
+        .dt-table-wrapper {
+            @apply mx-0 px-0;
+        }
+    }
+
+    /* Alineación vertical en celdas */
+    table.dataTable tbody td {
+        vertical-align: middle;
+    }
+}
+
+/* ====== Estilos globales adicionales ====== */
+@layer base {
+    body {
+        @apply bg-gray-50 text-gray-900 antialiased;
+    }
+}
+
+/* ====== Animaciones suaves ====== */
+@layer utilities {
+    .transition-colors {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
+    }
+}
