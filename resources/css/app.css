@@ -200,3 +200,13 @@
         transition-duration: 200ms;
     }
 }
+
+@layer utilities {
+    .img-zoom {
+        transition: transform .25s ease;
+    }
+
+    .group:hover .img-zoom {
+        transform: scale(1.02);
+    }
+}

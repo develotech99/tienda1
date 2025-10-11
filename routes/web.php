@@ -26,20 +26,22 @@ Route::middleware('auth')->group(function () {
         // TIPO DE PRODUCTOS
         Route::get('tipo', [ProductoTipoController::class, 'index'])->name('tipo.index');
         Route::post('agregar/tipo', [ProductoTipoController::class, 'store'])->name('tipo.store');
-        Route::get('tipo/ObtenerDatosAPI', [ProductoTipoController::class, 'show'])->name('tipo.obtener-datos'); // ✅ Cambiado
+        Route::get('tipo/ObtenerDatosAPI', [ProductoTipoController::class, 'show'])->name('tipo.obtener-datos');
         Route::put('actualizar/tipo', [ProductoTipoController::class, 'update'])->name('tipo.actualizar');
         Route::delete('eliminar/tipo', [ProductoTipoController::class, 'destroy'])->name('tipo.destroy');
 
         // REGISTROS Y STOCK DE PRODUCTOS
         Route::get('/', [ProductoController::class, 'index'])->name('index');
-        Route::get('/crear', [ProductoController::class, 'create'])->name('create');
-        Route::get('/ObtenerDatosAPI', [ProductoController::class, 'obtenerDatosAPI'])->name('obtener-datos'); // ✅ NUEVO
+        Route::get('/ObtenerDatosAPI', [ProductoController::class, 'obtenerDatosAPI'])->name('obtener.datos');
+        Route::get('/{id}', [ProductoController::class, 'show'])->name('show');
         Route::post('/', [ProductoController::class, 'store'])->name('store');
-        Route::get('/{id}', [ProductoController::class, 'show'])->name('show'); // ✅ NUEVO
-        Route::put('/{id}', [ProductoController::class, 'update'])->name('update'); // ✅ NUEVO
-        Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy'); // ✅ NUEVO
+        Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
         Route::post('/buscar-codigo', [ProductoController::class, 'buscarPorCodigo'])->name('buscar.codigo');
-        Route::post('/{id}/stock', [ProductoController::class, 'actualizarStock'])->name('actualizar.stock');
+        Route::post('/{id}/entrada-stock', [ProductoController::class, 'entradaStock'])->name('entrada.stock');
+        Route::get('/stock', [ProductoController::class, 'stockView'])->name('stock.view');
+        Route::get('/barcode/{codigo}', [ProductoController::class, 'etiquetaBarcode'])->name('barcode');
+        Route::post('/{id}/asignar-codigo', [ProductoController::class, 'asignarCodigo'])->name('asignar.codigo');
     });
 });
 

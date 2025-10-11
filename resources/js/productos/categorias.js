@@ -88,7 +88,7 @@ const GuardarTipo = async (e) => {
 
 
 const CargarDatos = async () => {
-    const url = "/productos/ObtenerDatosAPI";
+    const url = "/productos/tipo/ObtenerDatosAPI";
     const config = {
         method: "GET",
         headers: {

@@ -11,7 +11,7 @@ class Producto extends Model
 
     protected $table = "productos";
     protected $primaryKey = 'prod_id';
-    
+
     protected $fillable = [
         'prod_codigo',
         'prod_nombre',
@@ -47,7 +47,7 @@ class Producto extends Model
         do {
             $codigo = 'PROD-' . strtoupper(substr(uniqid(), -8));
         } while (self::where('prod_codigo', $codigo)->exists());
-        
+
         return $codigo;
     }
 }

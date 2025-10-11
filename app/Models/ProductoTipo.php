@@ -18,5 +18,8 @@ class ProductoTipo extends Model
         'tprod_situacion'
     ];
 
-
+    public function productos()
+    {
+        return $this->hasMany(Producto::class, 'tprod_id', 'tprod_id');
+    }
 }
