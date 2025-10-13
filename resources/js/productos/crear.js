@@ -3,26 +3,15 @@ import { closeModal, Loader, setBtnLoading } from "../app";
 
 const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
-// ==== helpers de escape seguros ====
-const escapeHtmlAttr = (str) =>
-    String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/"/g, "&quot;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-const escapeJsSingleArg = (str) => {
-    let s = String(str ?? "");
-    s = s.replace(new RegExp("\\\\", "g"), "\\\\");
-    s = s.replace(new RegExp("'", "g"), "\\'");
-    s = s.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
-    return s;
-};
-
 // Estado
 let productosData = [];
 let categoriaActual = "";
 let productoActual = null;
+
+// === CONFIGURACIÓN ROBUSTA DEL SCANNER ===
+let scannerTimeout = null;
+let isScannerProcessing = false;
+let lastScannedCode = '';
 
 // Elementos
 const scannerInput = document.getElementById("scannerInput");
@@ -31,13 +20,139 @@ const productosGrid = document.getElementById("productosGrid");
 const emptyState = document.getElementById("emptyState");
 const searchBox = document.getElementById("searchBox");
 
-// feedback escáner
-const scannerNombreWrap = document.getElementById("scannerNombreWrap");
-const scannerNombre = document.getElementById("scannerNombre");
-const scannerBtnImprimir = document.getElementById("scannerBtnImprimir");
-const scannerBtnEditar = document.getElementById("scannerBtnEditar");
+// ========================= ESCÁNER MEJORADO =========================
+const setupScanner = () => {
+    if (!scannerInput) return;
 
-// ========================= ESCÁNER CON BÚSQUEDA DINÁMICA =========================
+    console.log("🎯 Inicializando scanner...");
+
+    // Limpiar listeners anteriores
+    scannerInput.removeEventListener('keydown', handleScannerKeydown);
+    scannerInput.removeEventListener('input', handleScannerInput);
+
+    // Listener para ENTER (scanner físico)
+    scannerInput.addEventListener('keydown', handleScannerKeydown);
+
+    // Listener para input manual
+    scannerInput.addEventListener('input', handleScannerInput);
+
+    // Enfocar inmediatamente
+    setTimeout(() => {
+        scannerInput.focus();
+        console.log("🎯 Scanner enfocado en init");
+    }, 1000);
+};
+
+const handleScannerKeydown = async (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const code = scannerInput.value.trim();
+        console.log("🔑 Enter detectado, código:", code);
+
+        if (!code || code === lastScannedCode || isScannerProcessing) {
+            console.log("⏸️  Código vacío, duplicado o en proceso - ignorando");
+            scannerInput.value = '';
+            return;
+        }
+
+        await processScannedCode(code);
+    }
+};
+
+const handleScannerInput = (e) => {
+    const code = e.target.value;
+
+    // Debounce para búsqueda dinámica
+    if (scannerTimeout) clearTimeout(scannerTimeout);
+
+    scannerTimeout = setTimeout(() => {
+        if (code.length >= 3 && !isScannerProcessing) {
+            busquedaDinamicaScanner(code);
+        } else if (code.length === 0) {
+            ocultarSugerenciasScanner();
+        }
+    }, 300);
+};
+
+const processScannedCode = async (code) => {
+    isScannerProcessing = true;
+    lastScannedCode = code;
+
+    console.log("🔄 Procesando código:", code);
+
+    // Limpiar input inmediatamente
+    scannerInput.value = '';
+    scannerInput.blur(); // Quitar focus temporalmente
+
+    // Mostrar estado de búsqueda
+    scannerStatus.textContent = "● Buscando...";
+    scannerStatus.className = "text-sm font-semibold text-amber-600";
+
+    try {
+        const normalizado = normalizarCodigo(code);
+        const r = await fetch("/productos/buscar-codigo", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": token,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ codigo: normalizado }),
+        });
+
+        const j = await r.json();
+
+        if (j.success && j.encontrado) {
+            scannerStatus.textContent = "● Encontrado ✓";
+            scannerStatus.className = "text-sm font-semibold text-green-600";
+
+            // Pequeño delay para feedback visual
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            abrirModalActualizarStock(j.producto);
+        } else {
+            scannerStatus.textContent = "● No encontrado";
+            scannerStatus.className = "text-sm font-semibold text-red-600";
+
+            await preguntarCrearProducto(normalizado);
+        }
+    } catch (error) {
+        console.error("❌ Error scanner:", error);
+        scannerStatus.textContent = "● Error conexión";
+        scannerStatus.className = "text-sm font-semibold text-red-600";
+    } finally {
+        // Reset después de un delay
+        setTimeout(() => {
+            resetScannerState();
+        }, 1000);
+    }
+};
+
+const resetScannerState = () => {
+    isScannerProcessing = false;
+    scannerStatus.textContent = "● Listo";
+    scannerStatus.className = "text-sm font-semibold text-emerald-600";
+
+    // Re-enfocar el scanner
+    setTimeout(() => {
+        if (scannerInput && !isAnyModalOpen()) {
+            scannerInput.focus();
+            console.log("🎯 Scanner re-enfocado después de acción");
+        }
+    }, 200);
+};
+
+const isAnyModalOpen = () => {
+    const modalStock = document.getElementById('modalActualizarStock');
+    const modalCrear = document.getElementById('modalCrearProducto');
+
+    return (modalStock && !modalStock.classList.contains('hidden')) ||
+           (modalCrear && !modalCrear.classList.contains('hidden'));
+};
+
+// ========================= BÚSQUEDA DINÁMICA =========================
 const busquedaDinamicaScanner = (codigo) => {
     const coincidencias = productosData.filter(p =>
         p.prod_codigo && p.prod_codigo.toLowerCase().includes(codigo.toLowerCase())
@@ -79,7 +194,8 @@ const mostrarSugerenciasScanner = (productos) => {
         item.addEventListener('click', () => {
             const codigo = item.dataset.codigo;
             scannerInput.value = codigo;
-            buscarProductoPorCodigo(codigo);
+            // Usar el nuevo sistema de procesamiento
+            processScannedCode(codigo);
             ocultarSugerenciasScanner();
         });
     });
@@ -98,122 +214,13 @@ document.addEventListener('click', (e) => {
     }
 });
 
-const buscarProductoPorCodigo = async (codigo) => {
-    codigo = normalizarCodigo(codigo);
-
-    console.log("=== INICIANDO BÚSQUEDA ===");
-    console.log("Código:", codigo, "| Longitud:", codigo.length);
-
-    if (!codigo) {
-        console.log("❌ Código vacío");
-        scannerStatus.textContent = "● Código vacío";
-        scannerStatus.className = "text-sm font-semibold text-red-600";
-        limpiarFeedbackScanner();
-        scannerInput.focus();
-        return;
-    }
-
-    // Limpiar feedback previo
-    limpiarFeedbackScanner();
-
-    scannerStatus.textContent = "● Buscando...";
-    scannerStatus.className = "text-sm font-semibold text-amber-600";
-
-    try {
-        const r = await fetch("/productos/buscar-codigo", {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": token,
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
-            body: JSON.stringify({ codigo }),
-        });
-
-        if (!r.ok) {
-            throw new Error(`HTTP ${r.status}`);
-        }
-
-        const j = await r.json();
-        console.log("📦 Respuesta:", j);
-
-        if (j.success && j.encontrado) {
-            console.log("✅ PRODUCTO ENCONTRADO - Abriendo modal");
-            const p = j.producto;
-
-            scannerStatus.textContent = "● Encontrado";
-            scannerStatus.className = "text-sm font-semibold text-green-600";
-
-            // Abrir modal directamente SIN mostrar feedback
-            abrirModalActualizarStock(p);
-
-            // Limpiar después de un momento
-            setTimeout(() => {
-                limpiarFeedbackScanner();
-                scannerStatus.textContent = "● Listo";
-                scannerStatus.className = "text-sm font-semibold text-emerald-600";
-            }, 1000);
-
-        } else {
-            console.log("❌ PRODUCTO NO ENCONTRADO");
-
-            scannerStatus.textContent = "● No encontrado";
-            scannerStatus.className = "text-sm font-semibold text-red-600";
-
-            await preguntarCrearProducto(codigo);
-
-            // Limpiar después del Swal
-            limpiarFeedbackScanner();
-            setTimeout(() => {
-                scannerStatus.textContent = "● Listo";
-                scannerStatus.className = "text-sm font-semibold text-emerald-600";
-            }, 300);
-        }
-
-    } catch (e) {
-        console.error("💥 Error:", e);
-
-        scannerStatus.textContent = "● Error";
-        scannerStatus.className = "text-sm font-semibold text-red-600";
-
-        await Swal.fire({
-            icon: "error",
-            title: "Error de conexión",
-            text: "No se pudo conectar con el servidor",
-            timer: 2500,
-            showConfirmButton: false
-        });
-
-        limpiarFeedbackScanner();
-        setTimeout(() => {
-            scannerStatus.textContent = "● Listo";
-            scannerStatus.className = "text-sm font-semibold text-emerald-600";
-        }, 300);
-    } finally {
-        setTimeout(() => {
-            scannerInput.focus();
-            console.log("🎯 Scanner re-enfocado");
-        }, 100);
-    }
-};
-
-
 const normalizarCodigo = (codigo) => {
     return codigo
         .trim()
-        .replace(/[\r\n]/g, '') // Quitar saltos de línea
-        .replace(/[''`´]/g, '-') // Reemplazar comillas por guion
-        .replace(/\s+/g, '-')    // Reemplazar espacios por guion
-        .toUpperCase();          // Uniformar a mayúsculas
-};
-
-// Nueva función para limpiar el feedback del scanner
-const limpiarFeedbackScanner = () => {
-    scannerNombreWrap?.classList.add("hidden");
-    scannerBtnImprimir?.classList.add("hidden");
-    scannerBtnEditar?.classList.add("hidden");
-    if (scannerNombre) scannerNombre.textContent = "";
+        .replace(/[\r\n]/g, '')
+        .replace(/[''`´]/g, '-')
+        .replace(/\s+/g, '-')
+        .toUpperCase();
 };
 
 const preguntarCrearProducto = async (codigo) => {
@@ -228,20 +235,15 @@ const preguntarCrearProducto = async (codigo) => {
         cancelButtonColor: "#6b7280",
     });
 
-    window.codigoEnProceso = false;
-    console.log("🔓 Flag liberado después de Swal");
-
     if (result.isConfirmed) {
         abrirModalCrearProducto(codigo);
     } else {
         // Resetear scanner cuando cancela
         setTimeout(() => {
             resetearScanner();
-            limpiarFeedbackScanner();
         }, 100);
     }
 };
-
 
 // ========================= CARGA LISTA =========================
 const cargarProductos = async (categoriaId = "") => {
@@ -308,82 +310,94 @@ const crearCardProducto = (p) => {
 
     const img = p.prod_imagen
         ? `/storage/${p.prod_imagen}`
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="160"%3E%3Crect width="100%25" height="100%25" fill="%23f8fafc"/%3E%3Ctext x="50%25" y="52%25" text-anchor="middle" font-size="12" fill="%2394a3b8"%3ESin imagen%3C/text%3E%3C/svg%3E';
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="160"%3E%3Crect width="100%25" height="100%25" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="52%25" text-anchor="middle" font-size="12" fill="%2394a3b8"%3ESin imagen%3C/text%3E%3C/svg%3E';
 
-    const estadoClase =
-        stock === 0 ? "bg-red-100 text-red-700 border-red-300" :
-        stock <= minimo ? "bg-amber-100 text-amber-700 border-amber-300" :
-        "bg-emerald-100 text-emerald-700 border-emerald-300";
+    // Configuración de estados
+    let estadoClase, estadoTexto, stockColor;
+    if (stock === 0) {
+        estadoClase = "bg-red-50 text-red-700 border-red-200";
+        estadoTexto = "Agotado";
+        stockColor = "text-red-600";
+    } else if (stock <= minimo) {
+        estadoClase = "bg-amber-50 text-amber-700 border-amber-200";
+        estadoTexto = "Stock bajo";
+        stockColor = "text-amber-600";
+    } else {
+        estadoClase = "bg-emerald-50 text-emerald-700 border-emerald-200";
+        estadoTexto = "En stock";
+        stockColor = "text-gray-700";
+    }
 
-    const estadoTexto =
-        stock === 0 ? "Agotado" :
-        stock <= minimo ? "Stock bajo" :
-        "En stock";
-
-    div.className =
-        "bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden h-full";
+    div.className = "card-supermercado";
 
     div.innerHTML = `
-      <!-- Imagen -->
-      <div class="w-full h-[150px] bg-gray-50 flex items-center justify-center overflow-hidden relative">
-          <img
-              src="${img}"
-              alt="${nombre}"
-              class="w-full h-full max-w-[130px] max-h-[130px] object-contain mx-auto"
-              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'160\\' height=\\'160\\'%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' fill=\\'%23f8fafc\\'/%3E%3Ctext x=\\'50%25\\' y=\\'52%25\\' text-anchor=\\'middle\\' font-size=\\'12\\' fill=\\'%2394a3b8\\'%3ESin imagen%3C/text%3E%3C/svg%3E'">
-          ${!tieneCodigo ? `<span class="absolute top-1 left-1 text-[10px] font-bold px-1 py-0.5 rounded bg-amber-500 text-white shadow-sm">SIN CÓDIGO</span>` : ""}
-      </div>
+        <!-- Contenedor de imagen con fondo gradiente -->
+        <div class="card-image-container">
+            <img
+                src="${img}"
+                alt="${nombre}"
+                class="card-image"
+                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'160\\' height=\\'160\\'%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' fill=\\'%23f1f5f9\\'/%3E%3Ctext x=\\'50%25\\' y=\\'52%25\\' text-anchor=\\'middle\\' font-size=\\'12\\' fill=\\'%2394a3b8\\'%3ESin imagen%3C/text%3E%3C/svg%3E'">
+            ${!tieneCodigo ? `<span class="absolute top-2 left-2 text-[8px] font-bold px-1.5 py-1 rounded bg-amber-500 text-white shadow-sm uppercase tracking-wide">Sin Código</span>` : ""}
+        </div>
 
-      <!-- Contenido -->
-      <div class="flex flex-col justify-between flex-1 px-3 py-2">
-          <div class="flex justify-between items-center mb-1">
-              <span class="text-[11px] text-gray-500 font-medium truncate">${categoria}</span>
-              <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border ${estadoClase}">${estadoTexto}</span>
-          </div>
+        <!-- Contenido del card -->
+        <div class="card-content">
+            <!-- Información superior -->
+            <div class="mb-2">
+                <div class="card-category">${categoria}</div>
+                <span class="card-status ${estadoClase}">${estadoTexto}</span>
+            </div>
 
-          <h3 class="text-[13px] font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[2.2rem]">${nombre}</h3>
+            <!-- Nombre del producto -->
+            <h3 class="card-name">${nombre}</h3>
 
-          <div class="flex justify-between items-center text-[11px] mt-1">
-              <span class="text-gray-500">Stock:</span>
-              <span class="font-semibold ${stock === 0 ? 'text-red-600' : stock <= minimo ? 'text-amber-600' : 'text-gray-700'}">${stock} un.</span>
-          </div>
+            <!-- Detalles inferiores -->
+            <div class="card-details">
+                <!-- Stock y precio -->
+                <div class="card-stock">
+                    <span class="stock-label">Stock:</span>
+                    <span class="stock-value ${stockColor}">${stock} un.</span>
+                </div>
+                
+                <div class="card-price">Q${precio.toFixed(2)}</div>
 
-          <div class="text-emerald-700 font-black text-sm mt-1">Q${precio.toFixed(2)}</div>
-
-          <!-- Código y botones -->
-          <div class="flex items-center justify-between bg-gray-50 rounded-md px-1.5 py-1 mt-2 border border-gray-100">
-              <span class="text-[10px] font-mono text-gray-700 truncate flex-1 mr-1">${tieneCodigo ? codigo : "Sin código"}</span>
-              <div class="flex gap-1">
-                  <button type="button"
-                      class="p-1 rounded hover:bg-white transition"
-                      title="Imprimir etiqueta"
-                      data-action="imprimir-barcode"
-                      data-codigo="${codigo}"
-                      data-nombre="${nombre}"
-                      ${!tieneCodigo ? "disabled" : ""}>
-                      <svg class="w-3.5 h-3.5 ${tieneCodigo ? "text-gray-600 hover:text-blue-600" : "text-gray-300"}"
-                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-                      </svg>
-                  </button>
-                  <button type="button"
-                      class="p-1 rounded hover:bg-white transition"
-                      title="Modificar producto"
-                      data-action="editar-producto"
-                      data-id="${p.prod_id}">
-                      <svg class="w-3.5 h-3.5 text-gray-600 hover:text-emerald-600"
-                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                  </button>
-              </div>
-          </div>
-      </div>
+                <!-- Código y acciones -->
+                <div class="card-footer">
+                    <div class="code-section">
+                        <span class="code-text">${tieneCodigo ? codigo : "Sin código"}</span>
+                        <div class="card-actions">
+                            <button type="button"
+                                class="btn-action"
+                                title="Imprimir etiqueta"
+                                data-action="imprimir-barcode"
+                                data-codigo="${codigo}"
+                                data-nombre="${nombre}"
+                                ${!tieneCodigo ? "disabled" : ""}>
+                                <svg class="w-3.5 h-3.5 ${tieneCodigo ? "text-gray-500 hover:text-blue-600" : "text-gray-300"}"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                </svg>
+                            </button>
+                            <button type="button"
+                                class="btn-action"
+                                title="Modificar producto"
+                                data-action="editar-producto"
+                                data-id="${p.prod_id}">
+                                <svg class="w-3.5 h-3.5 text-gray-500 hover:text-emerald-600"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
 
-    // Eventos
     div.querySelector('[data-action="imprimir-barcode"]')?.addEventListener("click", (e) => {
         const btn = e.currentTarget;
         if (!btn.disabled) {
@@ -397,7 +411,6 @@ const crearCardProducto = (p) => {
 
     return div;
 };
-
 
 // ========================= BÚSQUEDA MEJORADA =========================
 const buscarProductos = (t) => {
@@ -456,16 +469,21 @@ const abrirModalActualizarStock = (p) => {
     if (btnDel) {
         btnDel.disabled = parseInt(p.prod_stock_actual || 0) !== 0;
         btnDel.classList.toggle("opacity-50", btnDel.disabled);
-        btnDel.onclick = () => window.eliminarProducto(p.prod_id);
+        if (!btnDel.disabled) {
+            btnDel.onclick = () => eliminarProducto(p.prod_id);
+        }
     }
 
     llenarDatosEdicionQuick(p);
     cambiarTab("stock");
 
+    // RESET DE BOTONES DE ACCIÓN - CORREGIDO
     document.querySelectorAll(".accion-btn").forEach(btn => {
-        btn.className = (btn.dataset.accion === "entrada")
-            ? "accion-btn px-5 py-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold transition hover:bg-emerald-100 hover:shadow-md flex items-center justify-center gap-2"
-            : "accion-btn px-5 py-4 rounded-xl border-2 border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-50 hover:shadow-md flex items-center justify-center gap-2";
+        if (btn.dataset.accion === "entrada") {
+            btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold transition hover:bg-emerald-100 hover:shadow-md flex items-center justify-center gap-2";
+        } else {
+            btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-50 hover:shadow-md flex items-center justify-center gap-2";
+        }
     });
 
     calcularPreviewStock();
@@ -498,11 +516,13 @@ const cambiarTab = (tab) => {
     if (tab === "stock") {
         ts.className = "tab-btn flex-1 px-6 py-3 font-semibold text-emerald-600 border-b-2 border-emerald-600 transition";
         te.className = "tab-btn flex-1 px-6 py-3 font-semibold text-gray-500 hover:text-gray-700 transition";
-        cs.classList.remove("hidden"); ce.classList.add("hidden");
+        cs.classList.remove("hidden"); 
+        ce.classList.add("hidden");
     } else {
         te.className = "tab-btn flex-1 px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 transition";
         ts.className = "tab-btn flex-1 px-6 py-3 font-semibold text-gray-500 hover:text-gray-700 transition";
-        ce.classList.remove("hidden"); cs.classList.add("hidden");
+        ce.classList.remove("hidden"); 
+        cs.classList.add("hidden");
     }
 };
 
@@ -514,16 +534,25 @@ const calcularPreviewStock = () => {
     document.getElementById("preview-nuevo-stock").textContent = nuevo;
 };
 
+// CORREGIDO - Función para cambiar tipo de movimiento
 const cambiarTipoMovimiento = (tipo) => {
+    console.log("🔄 Cambiando tipo movimiento a:", tipo);
     document.getElementById("update_tipo_movimiento").value = tipo;
+    
     document.querySelectorAll(".accion-btn").forEach(btn => {
         if (btn.dataset.accion === tipo) {
-            const color = tipo === "entrada" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-red-500 bg-red-50 text-red-700";
-            btn.className = "accion-btn px-5 py-4 rounded-xl border-2 " + color + " font-bold transition flex items-center justify-center gap-2";
+            // Botón activo
+            if (tipo === "entrada") {
+                btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold transition hover:bg-emerald-100 hover:shadow-md flex items-center justify-center gap-2";
+            } else {
+                btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-red-500 bg-red-50 text-red-700 font-bold transition hover:bg-red-100 hover:shadow-md flex items-center justify-center gap-2";
+            }
         } else {
+            // Botón inactivo
             btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-50 hover:shadow-md flex items-center justify-center gap-2";
         }
     });
+    
     calcularPreviewStock();
 };
 
@@ -536,6 +565,17 @@ const guardarMovimientoStock = async (e) => {
 
     if (!cantidad || cantidad <= 0) {
         await Swal.fire({ icon: "warning", title: "Cantidad inválida", text: "Debe ingresar una cantidad válida" });
+        return;
+    }
+
+    // Validar que no haya salida mayor al stock actual
+    const stockActual = parseInt(productoActual?.prod_stock_actual || 0);
+    if (tipo === "salida" && cantidad > stockActual) {
+        await Swal.fire({ 
+            icon: "error", 
+            title: "Stock insuficiente", 
+            text: `No puedes sacar ${cantidad} unidades. Stock actual: ${stockActual}` 
+        });
         return;
     }
 
@@ -568,12 +608,15 @@ const guardarMovimientoStock = async (e) => {
                            <span class="text-emerald-600">→</span>
                            <span class="font-bold text-emerald-600">${j.stock_nuevo}</span>
                        </div>`,
-                timer: 2000, showConfirmButton: false
+                timer: 2000, 
+                showConfirmButton: false
             });
             closeModal("modalActualizarStock");
-            limpiarFeedbackScanner();
-            await cargarProductos(categoriaActual);
-            scannerInput.focus();
+            // ENFOQUE RÁPIDO DESPUÉS DE GUARDAR
+            setTimeout(() => {
+                resetearScanner();
+                cargarProductos(categoriaActual);
+            }, 100);
         } else {
             Swal.fire({ icon: "error", title: "Error", text: j.message || "No se pudo actualizar el stock" });
         }
@@ -586,15 +629,74 @@ const guardarMovimientoStock = async (e) => {
     }
 };
 
-// Nueva función para resetear el scanner
+// Función para resetear el scanner
 const resetearScanner = () => {
-    if (typeof window.codigoEnProceso !== 'undefined') {
-        window.codigoEnProceso = false;
-        console.log("🔄 Scanner reseteado manualmente");
-    }
     if (scannerInput) {
-        scannerInput.value = "";
-        scannerInput.focus();
+        scannerInput.value = '';
+        // ENFOQUE INMEDIATO
+        setTimeout(() => {
+            scannerInput.focus();
+        }, 50);
+    }
+    isScannerProcessing = false;
+    lastScannedCode = '';
+    scannerStatus.textContent = "● Listo";
+    scannerStatus.className = "text-sm font-semibold text-emerald-600";
+    console.log("🔄 Scanner reseteado completamente");
+};
+
+// CORREGIDO - Función de eliminar producto
+const eliminarProducto = async (id) => {
+    const producto = productosData.find(p => p.prod_id == id);
+    if (!producto) return;
+
+    const result = await Swal.fire({
+        icon: "warning",
+        title: "¿Eliminar producto?",
+        html: `<p class="text-gray-600">Vas a eliminar: <strong>${producto.prod_nombre}</strong></p>
+               <p class="text-sm text-red-600 mt-2">⚠️ Esta acción no se puede deshacer</p>`,
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#dc2626",
+        cancelButtonColor: "#6b7280"
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        Loader.show("Eliminando producto...");
+        const r = await fetch(`/productos/${id}`, {
+            method: "DELETE",
+            headers: {
+                "X-CSRF-TOKEN": token,
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+            },
+        });
+        const j = await r.json();
+
+        if (j.success) {
+            await Swal.fire({
+                icon: "success",
+                title: "Producto eliminado",
+                timer: 1500,
+                showConfirmButton: false
+            });
+            closeModal("modalActualizarStock");
+            // ENFOQUE RÁPIDO DESPUÉS DE ELIMINAR
+            setTimeout(() => {
+                resetearScanner();
+                cargarProductos(categoriaActual);
+            }, 100);
+        } else {
+            Swal.fire("Error", j.message || "No se pudo eliminar el producto", "error");
+        }
+    } catch (e) {
+        console.error("Error eliminando:", e);
+        Swal.fire("Error", "Fallo de conexión al eliminar", "error");
+    } finally {
+        Loader.hide();
     }
 };
 
@@ -650,9 +752,11 @@ const guardarEdicionQuick = async (e) => {
                 showConfirmButton: false
             });
             closeModal("modalActualizarStock");
-            limpiarFeedbackScanner();
-            await cargarProductos(categoriaActual);
-            scannerInput.focus();
+            // ENFOQUE RÁPIDO DESPUÉS DE EDITAR
+            setTimeout(() => {
+                resetearScanner();
+                cargarProductos(categoriaActual);
+            }, 100);
         } else {
             Swal.fire("Error", j.message || "No se pudo actualizar", "error");
         }
@@ -723,9 +827,11 @@ const crearProductoNuevo = async (e) => {
             });
 
             closeModal("modalCrearProducto");
-            limpiarFeedbackScanner();
-            await cargarProductos(categoriaActual);
-            scannerInput.focus();
+            // ENFOQUE RÁPIDO DESPUÉS DE CREAR
+            setTimeout(() => {
+                resetearScanner();
+                cargarProductos(categoriaActual);
+            }, 100);
         } else {
             Swal.fire({ icon: "error", title: "Error", text: j.message || "No se pudo crear el producto" });
         }
@@ -795,9 +901,7 @@ window.imprimirCodigoBarras = (codigo, nombre) => {
 
     w.document.write(html);
     w.document.close();
-
 };
-
 
 window.generarCodigoProducto = async (id) => {
     try {
@@ -834,186 +938,24 @@ window.generarCodigoProducto = async (id) => {
     }
 };
 
-window.eliminarProducto = async (id) => {
-    const ok = await Swal.fire({
-        icon: "warning",
-        title: "Eliminar producto",
-        text: "Esta acción dará de baja el producto. ¿Continuar?",
-        showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar",
-        confirmButtonColor: "#dc2626"
-    });
-    if (!ok.isConfirmed) return;
+// CORREGIDO - Función global de eliminar
+window.eliminarProducto = eliminarProducto;
 
-    try {
-        Loader.show("Eliminando...");
-        const r = await fetch(`/productos/${id}`, {
-            method: "DELETE",
-            headers: {
-                "X-CSRF-TOKEN": token,
-                "X-Requested-With": "XMLHttpRequest",
-                Accept: "application/json",
-            },
-        });
-        const j = await r.json();
-        if (j.success) {
-            await Swal.fire({
-                icon: "success",
-                title: "Producto eliminado",
-                timer: 1500,
-                showConfirmButton: false
-            });
-            closeModal("modalActualizarStock");
-            cargarProductos(categoriaActual);
-        } else {
-            Swal.fire("Error", j.message || "No se pudo eliminar", "error");
-        }
-    } catch (e) {
-        Swal.fire("Error", "Fallo de conexión", "error");
-    } finally {
-        Loader.hide();
-    }
-};
-
-// ========================= FOCO & INIT =========================
-const enfocarScanner = () => {
-    const activo = document.activeElement;
-    const modalStockAbierto = document.querySelector("#modalActualizarStock:not(.hidden)");
-    const modalCrearAbierto = document.querySelector("#modalCrearProducto:not(.hidden)");
-
-    if (scannerInput && !modalStockAbierto && !modalCrearAbierto) {
-        const elementosQueNoDebenTenerFoco = ['input', 'textarea', 'select', 'button'];
-        const tagName = activo?.tagName.toLowerCase();
-
-        if (!activo || activo === document.body || !elementosQueNoDebenTenerFoco.includes(tagName)) {
-            scannerInput.focus();
-        }
-    }
-};
-
+// ========================= INIT =========================
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("🚀 Inicializando gestión de productos...");
+
+    // Cargar datos iniciales
     cargarProductos();
 
-    // Escuchar cuando se cierra cualquier modal
-    document.addEventListener('modalClosed', (e) => {
-        const modalId = e.detail.modalId;
+    // Configurar scanner (¡ESTA ES LA CLAVE!)
+    setupScanner();
 
-        // Solo actuar si es uno de nuestros modales de productos
-        if (modalId === 'modalActualizarStock' || modalId === 'modalCrearProducto') {
-            setTimeout(() => {
-                resetearScanner();
-                limpiarFeedbackScanner();
-            }, 100);
-        }
-    });
-
-    // Exportar para que app.js pueda usarla si existe
-    window.limpiarFeedbackScanner = limpiarFeedbackScanner;
-
-    // === CONFIGURACIÓN MEJORADA DEL ESCÁNER ===
-    if (scannerInput) {
-        console.log("✅ Configurando escáner...");
-
-        let timeoutBusqueda = null;
-
-        // HACER GLOBAL para poder resetearlo desde otras funciones
-        window.codigoEnProceso = false;
-
-        // Listener ÚNICO para el escáner
-        scannerInput.addEventListener("keydown", async (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                if (timeoutBusqueda) {
-                    clearTimeout(timeoutBusqueda);
-                    timeoutBusqueda = null;
-                }
-
-                const codigo = scannerInput.value.trim().replace(/[\r\n]/g, '');
-                console.log("✅ Enter detectado - Código:", codigo);
-                console.log("📌 Flag codigoEnProceso:", window.codigoEnProceso);
-
-                if (window.codigoEnProceso) {
-                    console.log("⚠️ Búsqueda ya en proceso, ignorando...");
-                    return;
-                }
-
-                if (codigo) {
-                    window.codigoEnProceso = true;
-                    console.log("🔒 Flag activado");
-                    scannerInput.value = "";
-                    ocultarSugerenciasScanner();
-
-                    await buscarProductoPorCodigo(codigo);
-
-                    // IMPORTANTE: Resetear después de un pequeño delay
-                    setTimeout(() => {
-                        window.codigoEnProceso = false;
-                        console.log("🔓 Flag liberado");
-                    }, 500);
-                }
-            }
-        });
-
-        // Búsqueda dinámica con debounce
-        scannerInput.addEventListener("input", (e) => {
-            const codigo = e.target.value.trim().replace(/[\r\n]/g, '');
-
-            if (timeoutBusqueda) {
-                clearTimeout(timeoutBusqueda);
-            }
-
-            if (codigo.length >= 3) {
-                timeoutBusqueda = setTimeout(() => {
-                    busquedaDinamicaScanner(codigo);
-                }, 300);
-            } else {
-                ocultarSugerenciasScanner();
-            }
-        });
-
-        setTimeout(() => {
-            scannerInput.focus();
-            console.log("🎯 Scanner enfocado");
-        }, 800);
-    }
-
-    // Listener global para re-enfocar cuando la ventana recupera el foco
-    let focusTimeout = null;
-    window.addEventListener('focus', () => {
-        // Cancelar timeout anterior si existe
-        if (focusTimeout) {
-            clearTimeout(focusTimeout);
-        }
-
-        // Debounce para evitar ejecuciones múltiples
-        focusTimeout = setTimeout(() => {
-            const modalStockAbierto = document.querySelector("#modalActualizarStock:not(.hidden)");
-            const modalCrearAbierto = document.querySelector("#modalCrearProducto:not(.hidden)");
-
-            if (scannerInput && !modalStockAbierto && !modalCrearAbierto) {
-                resetearScanner();
-                console.log("🎯 Scanner re-enfocado por evento focus");
-            }
-
-            focusTimeout = null;
-        }, 300); // Esperar 300ms antes de ejecutar
-    });
-
-    // Event listeners
+    // Event listeners básicos
     searchBox?.addEventListener("input", (e) => buscarProductos(e.target.value));
 
     document.querySelectorAll(".categoria-btn").forEach(btn => {
         btn.addEventListener("click", () => filtrarPorCategoria(btn.dataset.categoria));
-    });
-
-    document.getElementById("formActualizarStock")?.addEventListener("submit", guardarMovimientoStock);
-    document.getElementById("update_cantidad")?.addEventListener("input", calcularPreviewStock);
-
-    document.querySelectorAll(".accion-btn").forEach(btn => {
-        btn.addEventListener("click", () => cambiarTipoMovimiento(btn.dataset.accion));
     });
 
     document.getElementById("btnNuevoProducto")?.addEventListener("click", () => abrirModalCrearProducto());
@@ -1030,11 +972,47 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // Forms
+    document.getElementById("formActualizarStock")?.addEventListener("submit", guardarMovimientoStock);
     document.getElementById("formCrearProducto")?.addEventListener("submit", crearProductoNuevo);
     document.getElementById("formEditarProductoQuick")?.addEventListener("submit", guardarEdicionQuick);
 
+    // Tabs
     document.getElementById("tabStock")?.addEventListener("click", () => cambiarTab("stock"));
     document.getElementById("tabEditar")?.addEventListener("click", () => cambiarTab("editar"));
 
-    setTimeout(enfocarScanner, 500);
+    // Botones de acción (ENTRADA/SALIDA) - CORREGIDO
+    document.querySelectorAll(".accion-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            cambiarTipoMovimiento(btn.dataset.accion);
+        });
+    });
+
+    // Input de cantidad
+    document.getElementById("update_cantidad")?.addEventListener("input", calcularPreviewStock);
+
+    // Global focus manager
+    window.addEventListener('focus', () => {
+        setTimeout(() => {
+            if (scannerInput && !isAnyModalOpen()) {
+                scannerInput.focus();
+                console.log("🎯 Ventana recuperó focus - scanner activado");
+            }
+        }, 200);
+    });
+
+    // Evento modal closed
+    document.addEventListener('modalClosed', (e) => {
+        const modalId = e.detail.modalId;
+        if (modalId === 'modalActualizarStock' || modalId === 'modalCrearProducto') {
+            console.log("🚪 Modal cerrado, reenfocando scanner...");
+            setTimeout(() => {
+                resetearScanner();
+            }, 100);
+        }
+    });
+
+    // Exportar funciones globales
+    window.resetearScanner = resetearScanner;
 });

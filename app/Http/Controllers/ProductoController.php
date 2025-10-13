@@ -8,6 +8,7 @@ use App\Models\StockMovimiento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
 
@@ -99,8 +100,22 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'prod_codigo' => 'nullable|string|max:50|unique:productos,prod_codigo',
-            'prod_nombre' => 'required|string|max:200',
+            'prod_codigo' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('productos', 'prod_codigo')->where(function ($query) {
+                    return $query->where('prod_situacion', 'Activo');
+                })
+            ],
+            'prod_nombre' => [
+                'required',
+                'string',
+                'max:200',
+                Rule::unique('productos', 'prod_nombre')->where(function ($query) {
+                    return $query->where('prod_situacion', 'Activo');
+                })
+            ],
             'prod_descripcion' => 'nullable|string',
             'prod_precio_compra' => 'required|numeric|min:0',
             'prod_precio_venta' => 'required|numeric|min:0',

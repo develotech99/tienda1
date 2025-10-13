@@ -11,6 +11,7 @@ export default defineConfig({
                 'resources/js/auth/forgot-pass.js', 
                 'resources/js/productos/categorias.js', 
                 'resources/js/productos/crear.js', 
+                'resources/js/productos/reportes.js', 
             ],
             refresh: true,
         }),

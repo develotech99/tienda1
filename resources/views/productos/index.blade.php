@@ -13,25 +13,176 @@
         overflow: hidden;
     }
 
-    #productosGrid>div {
+    #productosGrid>.card-supermercado {
+        height: 100%;
+    }
+
+    .card-supermercado {
         height: 100%;
         display: flex;
         flex-direction: column;
+        min-height: 300px;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
-    .line-clamp-2 {
+    .card-supermercado:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        border-color: #10b981;
+        transform: translateY(-2px);
+    }
+
+    .card-image-container {
+        height: 140px;
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 1px solid #f1f5f9;
+        padding: 15px;
+        position: relative;
+    }
+
+    .card-image {
+        max-width: 110px;
+        max-height: 110px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        transition: transform 0.3s ease;
+    }
+
+    .card-supermercado:hover .card-image {
+        transform: scale(1.05);
+    }
+
+    .card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+        background: white;
+    }
+
+    .card-category {
+        font-size: 10px;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+
+    .card-status {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid;
+        display: inline-block;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .card-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.3;
+        margin-bottom: 8px;
+        min-height: 2.6rem;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
+
+    .card-details {
+        margin-top: auto;
+    }
+
+    .card-stock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        margin-bottom: 6px;
+    }
+
+    .stock-label {
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .stock-value {
+        font-weight: 700;
+    }
+
+    .card-price {
+        font-size: 14px;
+        font-weight: 800;
+        color: #059669;
+        margin-bottom: 8px;
+    }
+
+    .card-footer {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 6px 8px;
+        border: 1px solid #f1f5f9;
+    }
+
+    .code-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .code-text {
+        font-size: 9px;
+        font-family: 'Courier New', monospace;
+        color: #475569;
+        font-weight: 600;
+        flex: 1;
+        margin-right: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    .btn-action {
+        padding: 4px;
+        border-radius: 5px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-action:hover {
+        background: white;
+        transform: scale(1.1);
+    }
 </style>
 
-<div class="flex h-[calc(100vh-120px)] gap-4">
+<div class="flex flex-col md:flex-row md:h-[calc(100vh-120px)] min-h-[calc(100vh-120px)] gap-4">
 
     <!-- SIDEBAR -->
-    <div class="w-64 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col">
+    <div class="w-full md:w-64 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col md:sticky md:top-20">
+
         <div class="px-4 py-4 bg-gradient-to-br from-emerald-600 via-emerald-600 to-emerald-700 flex-shrink-0">
             <div class="flex items-center gap-2 mb-1">
                 <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -78,7 +229,7 @@
     </div>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <div class="flex-1 flex flex-col gap-3 overflow-hidden">
+    <div class="flex-1 flex flex-col gap-3 overflow-visible md:overflow-hidden">
 
         <!-- TOOLBAR -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
@@ -152,7 +303,7 @@
 
             <div class="flex-1 overflow-y-auto p-3">
                 <div id="productosGrid"
-                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 items-stretch content-start auto-rows-fr min-h-[360px]">
+                    class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 items-stretch">
                 </div>
 
 
