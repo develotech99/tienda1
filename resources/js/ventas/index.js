@@ -1,6 +1,7 @@
 import Swal from "sweetalert2";
 import "datatables.net-dt/css/dataTables.dataTables.css";
 import DataTable from "datatables.net-dt";
+import { Loader, openModal, closeModal } from "../app";
 
 let inputCodigoBarras = document.getElementById('codigoBarras');
 let inputBusqueda = document.getElementById('busquedaProducto');
@@ -151,12 +152,135 @@ const agregarProductoALaVenta = (producto) => {
     calcularTotales();
 };
 
-
 const actualizarDataTable = () => {
     if (datatableVentas) {
-        datatableVentas.clear();
-        datatableVentas.rows.add(productosVenta);
-        datatableVentas.draw();
+        try {
+            const tabla = document.getElementById('tablaVentas');
+            if (!tabla) {
+                console.warn('La tabla ya no existe en el DOM');
+                return;
+            }
+
+            if (datatableVentas) {
+                datatableVentas.destroy();
+                datatableVentas = null;
+            }
+
+            datatableVentas = new DataTable('#tablaVentas', {
+                dom: `
+                  <"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"
+                      <"dataTables_length">
+                      <"dataTables_filter">
+                  >
+                  <"dt-table-wrapper">
+                  t
+                  <"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4"
+                      <"dataTables_info">
+                      <"dataTables_paginate">
+                  >
+                `,
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json",
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    search: "Buscar:",
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ productos",
+                    infoEmpty: "No hay productos en la venta",
+                    infoFiltered: "(filtrado de _MAX_ productos totales)",
+                    paginate: {
+                        first: "Primero",
+                        previous: "Anterior",
+                        next: "Siguiente",
+                        last: "Último"
+                    }
+                },
+                data: productosVenta,
+                pageLength: 10,
+                autoWidth: false,
+                responsive: true,
+                ordering: false,
+                columnDefs: [
+                    {
+                        targets: "_all",
+                        className: "align-middle py-3 px-4"
+                    }
+                ],
+                columns: [
+                    {
+                        title: 'No.',
+                        data: null,
+                        width: '60px',
+                        className: 'text-center text-gray-600 font-medium',
+                        render: (_d, _t, _r, meta) => meta.row + 1
+                    },
+                    {
+                        title: 'Producto',
+                        data: null,
+                        className: 'text-gray-900 font-semibold',
+                        render: (data) => `
+                            <div>
+                                <div class="font-medium">${data.prod_nombre}</div>
+                                <div class="text-xs text-gray-500">${data.prod_codigo}</div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Precio',
+                        data: 'prod_precio_venta',
+                        width: '100px',
+                        className: 'text-center font-medium',
+                        render: (precio) => `Q ${parseFloat(precio).toFixed(2)}`
+                    },
+                    {
+                        title: 'Cantidad',
+                        data: null,
+                        width: '140px',
+                        className: 'text-center',
+                        render: (data) => `
+                            <div class="flex items-center justify-center gap-2">
+                                <button class="disminuir w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm"
+                                        data-id="${data.prod_id}">-</button>
+                                
+                                <input type="number" 
+                                    class="cantidad-input w-16 text-center border border-gray-300 rounded py-1 text-sm focus:border-emerald-400 focus:ring-emerald-400"
+                                    value="${data.cantidad}"
+                                    min="1"
+                                    max="${data.prod_stock_actual}"
+                                    data-id="${data.prod_id}">
+                                
+                                <button class="aumentar w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm"
+                                        data-id="${data.prod_id}">+</button>
+                            </div>
+                        `
+                    },
+                    {
+                        title: 'Subtotal',
+                        data: null,
+                        width: '100px',
+                        className: 'text-center font-semibold text-emerald-600',
+                        render: (data) => `Q ${(data.cantidad * parseFloat(data.prod_precio_venta)).toFixed(2)}`
+                    },
+                    {
+                        title: 'Acciones',
+                        data: null,
+                        width: '80px',
+                        className: 'text-center',
+                        render: (data) => `
+                            <button class="eliminar inline-flex items-center justify-center w-9 h-9 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors duration-200"
+                                    title="Quitar producto"
+                                    data-id="${data.prod_id}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        `
+                    }
+                ]
+            });
+
+        } catch (error) {
+            console.error('Error al actualizar DataTable:', error);
+            inicializarDataTable();
+        }
     }
 };
 
@@ -195,7 +319,7 @@ const calcularCambio = () => {
 
             if (cambio >= 0) {
                 cambioElement.textContent = `Q ${cambio.toFixed(2)}`;
-                cambioElement.className = 'text-lg font-bold text-emerald-600';
+                cambioElement.className = 'text-lg font-bold text-blue-600';
             } else {
                 cambioElement.textContent = `-Q ${Math.abs(cambio).toFixed(2)}`;
                 cambioElement.className = 'text-lg font-bold text-red-600';
@@ -239,10 +363,10 @@ const agregarEventListenersTabla = () => {
 
 const cambiarCantidad = (productId, cambio) => {
     const producto = productosVenta.find(p => p.prod_id === productId);
-    
+
     if (producto) {
         const nuevaCantidad = producto.cantidad + cambio;
-        
+
         if (nuevaCantidad <= 0) {
             eliminarProducto(productId);
         } else if (nuevaCantidad <= producto.prod_stock_actual) {
@@ -411,8 +535,12 @@ window.actualizarCantidadDesdeInput = (productId, nuevaCantidad) => {
     if (producto && !isNaN(cantidad) && cantidad > 0) {
         if (cantidad <= producto.prod_stock_actual) {
             producto.cantidad = cantidad;
-            actualizarDataTable();
-            calcularTotales();
+
+            setTimeout(() => {
+                actualizarDataTable();
+                calcularTotales();
+            }, 10);
+
         } else {
             Swal.fire({
                 icon: "warning",
@@ -420,7 +548,6 @@ window.actualizarCantidadDesdeInput = (productId, nuevaCantidad) => {
                 text: `No hay suficiente stock. Stock disponible: ${producto.prod_stock_actual}`,
                 confirmButtonColor: "#ffc107",
             });
-            // Restaurar el valor anterior
             const input = document.querySelector(`.cantidad-input[data-id="${productId}"]`);
             if (input) {
                 input.value = producto.cantidad;
@@ -436,18 +563,24 @@ const agregarEventListenersInputCantidad = () => {
             e.preventDefault();
             const productId = parseInt(e.target.getAttribute('data-id'));
             const nuevaCantidad = parseInt(e.target.value);
-            actualizarCantidadDesdeInput(productId, nuevaCantidad);
-            e.target.blur(); // Quitar el foco después de presionar Enter
+
+            setTimeout(() => {
+                actualizarCantidadDesdeInput(productId, nuevaCantidad);
+            }, 10);
+
+            e.target.blur();
         }
     });
 
-    // También actualizar al perder el foco (blur)
     document.addEventListener('blur', (e) => {
         if (e.target.classList.contains('cantidad-input')) {
             const productId = parseInt(e.target.getAttribute('data-id'));
             const nuevaCantidad = parseInt(e.target.value);
+
             if (!isNaN(nuevaCantidad) && nuevaCantidad > 0) {
-                actualizarCantidadDesdeInput(productId, nuevaCantidad);
+                setTimeout(() => {
+                    actualizarCantidadDesdeInput(productId, nuevaCantidad);
+                }, 50);
             }
         }
     }, true);
@@ -631,3 +764,276 @@ document.addEventListener('click', function (e) {
         ocultarResultados();
     }
 });
+
+// ========================= MODAL DE CONFIRMACIÓN =========================
+
+const abrirModalConfirmacion = () => {
+
+    if (productosVenta.length === 0) {
+        Swal.fire({
+            icon: "warning",
+            title: "Venta vacía",
+            text: "Agrega productos a la venta antes de continuar",
+            confirmButtonColor: "#ffc107",
+        });
+        return;
+    }
+
+    const montoRecibidoInput = document.getElementById('montoRecibido');
+    if (!montoRecibidoInput) {
+        Swal.fire({
+            icon: "error",
+            title: "Error del sistema",
+            text: "No se encontró el campo de monto recibido",
+            confirmButtonColor: "#ef4444",
+        });
+        return;
+    }
+
+    const montoRecibido = parseFloat(montoRecibidoInput.value) || 0;
+    const total = parseFloat(document.getElementById('total').textContent.replace('Q ', '')) || 0;
+
+    if (montoRecibido < total) {
+        Swal.fire({
+            icon: "warning",
+            title: "Monto insuficiente",
+            text: `El monto recibido (Q${montoRecibido.toFixed(2)}) es menor al total (Q${total.toFixed(2)})`,
+            confirmButtonColor: "#ffc107",
+        });
+        return;
+    }
+
+    const cambio = montoRecibido - total;
+
+    document.getElementById('resumenCantidadProductos').textContent = productosVenta.length;
+    document.getElementById('resumenSubtotal').textContent = `Q ${total.toFixed(2)}`;
+    document.getElementById('resumenEfectivo').textContent = `Q ${montoRecibido.toFixed(2)}`;
+    document.getElementById('resumenCambio').textContent = `Q ${cambio.toFixed(2)}`;
+    document.getElementById('resumenTotal').textContent = `Q ${total.toFixed(2)}`;
+
+    openModal('modalConfirmacionVenta');
+};
+
+document.getElementById('btnConfirmarProcesar')?.addEventListener('click', async () => {
+    await procesarVentaCompleta();
+});
+
+// ========================= PROCESAR VENTA COMPLETA =========================
+
+const procesarVentaCompleta = async () => {
+    const montoRecibidoInput = document.getElementById('montoRecibido');
+    const montoRecibido = parseFloat(montoRecibidoInput.value) || 0;
+    const total = parseFloat(document.getElementById('total').textContent.replace('Q ', '')) || 0;
+    const cambio = montoRecibido - total;
+
+    const datosVenta = {
+        total: total,
+        efectivo: montoRecibido,
+        cambio: cambio,
+        cliente: null,
+        nit: 'CF',
+        productos: productosVenta.map(p => ({
+            prod_id: p.prod_id,
+            cantidad: p.cantidad,
+            precio: p.prod_precio_venta
+        }))
+    };
+
+    Loader.show('Procesando venta...');
+
+    try {
+        const url = `${BASE_API}ventaAPI`;
+        const config = {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datosVenta)
+        };
+
+        const response = await fetch(url, config);
+        const resultado = await response.json();
+
+        Loader.hide();
+
+        if (resultado.codigo === 1) {
+            await mostrarTicketVenta(resultado.data);
+            limpiarVenta();
+            closeModal('modalConfirmacionVenta');
+            actualizarMetricasDespuesDeVenta();
+
+        } else {
+            throw new Error(resultado.mensaje || 'Error al procesar la venta');
+        }
+
+    } catch (error) {
+        Loader.hide();
+        console.error('Error al procesar venta:', error);
+        await Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: error.message || "No se pudo procesar la venta",
+            confirmButtonColor: "#ef4444",
+        });
+    }
+};
+
+
+const mostrarTicketVenta = async (datosVenta) => {
+    const { venta, numero_venta } = datosVenta;
+
+    let ticketHTML = `
+        <div class="text-center mb-4">
+            <div class="text-lg font-bold text-emerald-600">¡VENTA EXITOSA!</div>
+            <div class="text-sm text-gray-600">N° Venta: #${numero_venta}</div>
+        </div>
+        
+        <div class="border-t border-b border-gray-200 py-3 mb-3">
+            <div class="flex justify-between text-sm mb-1">
+                <span>Fecha:</span>
+                <span>${venta.ven_fecha} ${venta.ven_hora}</span>
+            </div>
+        </div>
+        
+        <div class="max-h-40 overflow-y-auto mb-3">
+    `;
+
+    venta.detalles.forEach(detalle => {
+        ticketHTML += `
+            <div class="flex justify-between text-sm mb-2">
+                <div class="text-left">
+                    <div class="font-medium">${detalle.producto.prod_nombre}</div>
+                    <div class="text-xs text-gray-500">${detalle.vendet_cantidad} x Q${parseFloat(detalle.vendet_precio).toFixed(2)}</div>
+                </div>
+                <div class="font-medium">Q${parseFloat(detalle.vendet_total).toFixed(2)}</div>
+            </div>
+        `;
+    });
+
+    ticketHTML += `
+        </div>
+        
+        <div class="border-t border-gray-200 pt-3">
+            <div class="flex justify-between font-bold text-lg">
+                <span>TOTAL:</span>
+                <span>Q${parseFloat(venta.ven_total).toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm mt-1">
+                <span>Efectivo:</span>
+                <span>Q${parseFloat(venta.ven_efectivo).toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm mt-1">
+                <span>Cambio:</span>
+                <span>Q${parseFloat(venta.ven_cambio).toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+
+    await Swal.fire({
+        title: "Venta Completada",
+        html: ticketHTML,
+        icon: "success",
+        confirmButtonColor: "#10b981",
+        confirmButtonText: "Aceptar",
+        width: 400
+    });
+};
+
+
+const limpiarVenta = () => {
+    productosVenta = [];
+    actualizarDataTable();
+    calcularTotales();
+
+    document.getElementById('montoRecibido').value = '';
+    document.getElementById('cambio').textContent = 'Q 0.00';
+    document.getElementById('cambio').className = 'text-lg font-bold text-gray-600';
+
+    inputCodigoBarras.focus();
+};
+
+// ========================= ACTUALIZAR BOTÓN FINALIZAR =========================
+
+document.getElementById('btnFinalizarVenta')?.addEventListener('click', abrirModalConfirmacion);
+
+// ========================= NUEVA VENTA =========================
+
+document.getElementById('btnNuevaVenta')?.addEventListener('click', () => {
+    if (productosVenta.length === 0) {
+        inputCodigoBarras.focus();
+        return;
+    }
+
+    Swal.fire({
+        title: "¿Nueva venta?",
+        text: "Se perderán los productos actuales de la venta",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3b82f6",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Sí, nueva venta",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            limpiarVenta();
+        }
+    });
+});
+
+// ========================= MÉTRICAS EN TIEMPO REAL =========================
+
+const cargarMetricasDelDia = async () => {
+    try {
+        const url = `/ventas/metricas-del-dia`;
+        const config = {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: 'application/json'
+            }
+        };
+
+        const response = await fetch(url, config);
+        const resultado = await response.json();
+
+        if (resultado.codigo === 1) {
+            actualizarUIconMetricas(resultado.data);
+        } else {
+            console.warn('Error en respuesta de métricas:', resultado.mensaje);
+        }
+    } catch (error) {
+        console.warn('Error al cargar métricas:', error);
+    }
+};
+
+const actualizarUIconMetricas = (metricas) => {
+    // Actualizar métricas principales
+    document.getElementById('totalVentasHoy').textContent = metricas.total_ventas || 0;
+    document.getElementById('totalProductosVendidos').textContent = metricas.total_productos_vendidos || 0;
+    document.getElementById('ingresosHoy').textContent = `Q ${parseFloat(metricas.ingresos_hoy || 0).toFixed(2)}`;
+
+    // Si tienes saldo de caja, actualízalo también
+    if (metricas.saldo_caja_actual !== undefined) {
+        const saldoElement = document.getElementById('saldoCajaActual');
+        if (saldoElement) {
+            saldoElement.textContent = `Q ${parseFloat(metricas.saldo_caja_actual || 0).toFixed(2)}`;
+        }
+    }
+};
+
+// Llamar cuando la página carga
+document.addEventListener('DOMContentLoaded', function () {
+    cargarMetricasDelDia();
+});
+
+// Llamar esta función después de una venta exitosa
+const actualizarMetricasDespuesDeVenta = () => {
+    // Pequeño delay para asegurar que el backend haya procesado la venta
+    setTimeout(() => {
+        cargarMetricasDelDia();
+    }, 1500); // 1.5 segundos para dar tiempo al servidor
+};

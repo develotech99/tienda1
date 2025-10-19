@@ -116,14 +116,14 @@
                                 <span class="flex-1">Nueva Venta</span>
                             </a>
 
-                            <a href="{{ url('/ventas') }}"
+                            <a href="{{ url('/ventas/historial') }}"
                                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 transition group" role="menuitem">
                                 <div class="p-1.5 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition">
                                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
                                 </div>
-                                <span class="flex-1">Historial de Ventas</span>
+                                <span class="flex-1">Caja/Historial Ventas</span>
                             </a>
 
                             <a href="{{ url('/ventas/reportes') }}"
@@ -291,7 +291,7 @@
                     </button>
                     <div class="hidden flex-col" data-accordion-panel="ventas">
                         <a href="{{ url('/ventas/index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Nueva Venta</a>
-                        <a href="{{ url('/ventas') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Historial de Ventas</a>
+                        <a href="{{ url('/ventas/historial') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Caja/Historial Ventas</a>
                         <a href="{{ url('/ventas/reportes') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Reportes y Gráficas</a>
                     </div>
                 </div>

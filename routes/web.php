@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CajaHistorialController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProductoTipoController;
 use App\Http\Controllers\ProfileController;
@@ -59,10 +60,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/asignar-codigo', [ProductoController::class, 'asignarCodigo'])->name('asignar.codigo');
     });
 
+
+    //VENTAS
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('index', [VentasController::class, 'index'])->name('index');
         Route::post('verificarProducto', [VentasController::class, 'BusquedaCodigo'])->name('busquedaAPI');
         Route::post('buscarPorNombre', [VentasController::class, 'buscarPorNombre'])->name('buscar.nombre');
+        Route::post('ventaAPI', [VentasController::class, 'ProcesarVenta'])->name('procesar.venta');
+        Route::get('metricas-del-dia', [VentasController::class, 'obtenerMetricasDelDia']);
+    });
+
+    Route::prefix('ventas/historial')->name('ventas.historial.')->group(function(){
+        Route::get('/', [CajaHistorialController::class, 'index'])->name('index');
     });
 });
 
