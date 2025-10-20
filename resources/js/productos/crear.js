@@ -149,7 +149,7 @@ const isAnyModalOpen = () => {
     const modalCrear = document.getElementById('modalCrearProducto');
 
     return (modalStock && !modalStock.classList.contains('hidden')) ||
-           (modalCrear && !modalCrear.classList.contains('hidden'));
+        (modalCrear && !modalCrear.classList.contains('hidden'));
 };
 
 // ========================= BÚSQUEDA DINÁMICA =========================
@@ -362,11 +362,28 @@ const crearCardProducto = (p) => {
                 
                 <div class="card-price">Q${precio.toFixed(2)}</div>
 
-                <!-- Código y acciones -->
+                <!-- Solo acciones (sin código de texto) -->
                 <div class="card-footer">
                     <div class="code-section">
-                        <span class="code-text">${tieneCodigo ? codigo : "Sin código"}</span>
                         <div class="card-actions">
+                            <!-- Botón VER código de barras -->
+                            <button type="button"
+                                class="btn-action"
+                                title="Ver código de barras"
+                                data-action="ver-barcode"
+                                data-codigo="${codigo}"
+                                data-nombre="${nombre}"
+                                ${!tieneCodigo ? "disabled" : ""}>
+                                <svg class="w-3.5 h-3.5 ${tieneCodigo ? "text-gray-500 hover:text-purple-600" : "text-gray-300"}"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                            
+                            <!-- Botón IMPRIMIR código de barras -->
                             <button type="button"
                                 class="btn-action"
                                 title="Imprimir etiqueta"
@@ -380,6 +397,8 @@ const crearCardProducto = (p) => {
                                         d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                                 </svg>
                             </button>
+                            
+                            <!-- Botón EDITAR producto -->
                             <button type="button"
                                 class="btn-action"
                                 title="Modificar producto"
@@ -398,6 +417,15 @@ const crearCardProducto = (p) => {
         </div>
     `;
 
+    // Event listener para VER código de barras
+    div.querySelector('[data-action="ver-barcode"]')?.addEventListener("click", (e) => {
+        const btn = e.currentTarget;
+        if (!btn.disabled) {
+            window.mostrarModalBarcode(btn.dataset.codigo, btn.dataset.nombre);
+        }
+    });
+
+    // Event listener para IMPRIMIR código de barras
     div.querySelector('[data-action="imprimir-barcode"]')?.addEventListener("click", (e) => {
         const btn = e.currentTarget;
         if (!btn.disabled) {
@@ -405,6 +433,7 @@ const crearCardProducto = (p) => {
         }
     });
 
+    // Event listener para EDITAR producto
     div.querySelector('[data-action="editar-producto"]')?.addEventListener("click", (e) => {
         window.abrirModalStock(e.currentTarget.dataset.id);
     });
@@ -516,12 +545,12 @@ const cambiarTab = (tab) => {
     if (tab === "stock") {
         ts.className = "tab-btn flex-1 px-6 py-3 font-semibold text-emerald-600 border-b-2 border-emerald-600 transition";
         te.className = "tab-btn flex-1 px-6 py-3 font-semibold text-gray-500 hover:text-gray-700 transition";
-        cs.classList.remove("hidden"); 
+        cs.classList.remove("hidden");
         ce.classList.add("hidden");
     } else {
         te.className = "tab-btn flex-1 px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 transition";
         ts.className = "tab-btn flex-1 px-6 py-3 font-semibold text-gray-500 hover:text-gray-700 transition";
-        ce.classList.remove("hidden"); 
+        ce.classList.remove("hidden");
         cs.classList.add("hidden");
     }
 };
@@ -538,7 +567,7 @@ const calcularPreviewStock = () => {
 const cambiarTipoMovimiento = (tipo) => {
     console.log("🔄 Cambiando tipo movimiento a:", tipo);
     document.getElementById("update_tipo_movimiento").value = tipo;
-    
+
     document.querySelectorAll(".accion-btn").forEach(btn => {
         if (btn.dataset.accion === tipo) {
             // Botón activo
@@ -552,7 +581,7 @@ const cambiarTipoMovimiento = (tipo) => {
             btn.className = "accion-btn px-5 py-4 rounded-xl border-2 border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-50 hover:shadow-md flex items-center justify-center gap-2";
         }
     });
-    
+
     calcularPreviewStock();
 };
 
@@ -571,10 +600,10 @@ const guardarMovimientoStock = async (e) => {
     // Validar que no haya salida mayor al stock actual
     const stockActual = parseInt(productoActual?.prod_stock_actual || 0);
     if (tipo === "salida" && cantidad > stockActual) {
-        await Swal.fire({ 
-            icon: "error", 
-            title: "Stock insuficiente", 
-            text: `No puedes sacar ${cantidad} unidades. Stock actual: ${stockActual}` 
+        await Swal.fire({
+            icon: "error",
+            title: "Stock insuficiente",
+            text: `No puedes sacar ${cantidad} unidades. Stock actual: ${stockActual}`
         });
         return;
     }
@@ -608,7 +637,7 @@ const guardarMovimientoStock = async (e) => {
                            <span class="text-emerald-600">→</span>
                            <span class="font-bold text-emerald-600">${j.stock_nuevo}</span>
                        </div>`,
-                timer: 2000, 
+                timer: 2000,
                 showConfirmButton: false
             });
             closeModal("modalActualizarStock");
@@ -936,6 +965,205 @@ window.generarCodigoProducto = async (id) => {
     } finally {
         Loader.hide();
     }
+};
+
+
+// Función para mostrar el modal con el código de barras (formato descargable)
+window.mostrarModalBarcode = (codigo, nombre) => {
+    if (!codigo) {
+        Swal.fire({ icon: "warning", title: "Sin código", text: "Este producto no tiene código para mostrar" });
+        return;
+    }
+
+    // Crear el HTML del modal con el formato específico
+    const modalHTML = `
+    <div id="modalBarcode" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <!-- Header -->
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">Código de Barras</h3>
+                <button type="button" id="cerrarModalBarcode" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Contenido - Formato igual a la impresión -->
+            <div class="p-6">
+                <div class="text-center">
+                    <!-- Nombre del producto -->
+                    <h4 class="text-lg font-bold text-gray-900 mb-3 leading-tight">${nombre || "Producto"}</h4>
+                    
+                    <!-- Contenedor del código de barras (igual al de impresión) -->
+                    <div class="bg-white p-4 border border-gray-300 rounded mb-4" id="barcode-container">
+                        <img src="/productos/barcode/${encodeURIComponent(codigo)}" 
+                             alt="Código de barras" 
+                             class="w-full h-auto mx-auto mb-2"
+                             id="barcode-image"
+                             onerror="this.style.display='none'; document.getElementById('errorBarcode').style.display='block';">
+                        
+                        <div id="errorBarcode" style="display: none;" class="text-red-500 text-sm mb-2">
+                            Error al cargar el código de barras
+                        </div>
+                        
+                        <!-- Código numérico centrado -->
+                        <div class="font-mono text-xl font-bold text-gray-900 text-center tracking-wider mt-2">
+                            ${codigo}
+                        </div>
+                    </div>
+                    
+                    <!-- Botones de acción -->
+                    <div class="flex flex-col space-y-3">
+                        <button type="button" id="descargarBarcode" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Descargar Imagen
+                        </button>
+                        
+                        <button type="button" id="imprimirBarcode" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                            </svg>
+                            Imprimir
+                        </button>
+                        
+                        <button type="button" id="cerrarModal" class="w-full px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    // Insertar el modal en el body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Obtener referencias a los elementos del modal
+    const modal = document.getElementById('modalBarcode');
+    const btnCerrar = document.getElementById('cerrarModalBarcode');
+    const btnCerrar2 = document.getElementById('cerrarModal');
+    const btnImprimir = document.getElementById('imprimirBarcode');
+    const btnDescargar = document.getElementById('descargarBarcode');
+
+    // Función para cerrar el modal
+    const cerrarModal = () => {
+        modal.remove();
+    };
+
+    // Función para descargar la imagen del código de barras CON NOMBRE
+    const descargarImagenBarcode = async () => {
+        try {
+            const barcodeImage = document.getElementById('barcode-image');
+
+            // Esperar a que la imagen se cargue completamente
+            if (barcodeImage.complete && barcodeImage.naturalHeight !== 0) {
+                // Crear un contenedor temporal para la imagen completa
+                const tempContainer = document.createElement('div');
+                tempContainer.style.cssText = `
+                    position: fixed;
+                    left: -10000px;
+                    top: -10000px;
+                    width: 400px;
+                    background: white;
+                    padding: 20px;
+                    text-align: center;
+                    border: 1px solid #ccc;
+                    font-family: Arial, sans-serif;
+                `;
+
+                // Construir el contenido igual al formato de impresión
+                tempContainer.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 18px; font-weight: bold; color: #1f2937; line-height: 1.4;">${nombre || "Producto"}</div>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <img src="${barcodeImage.src}" 
+                             alt="Código de barras" 
+                             style="width: 100%; height: auto; display: block; margin: 0 auto 10px;">
+                        <div style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: #374151; margin-top: 10px; letter-spacing: 2px;">
+                            ${codigo}
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(tempContainer);
+
+                // Usar html2canvas para capturar la imagen
+                const html2canvasScript = document.createElement('script');
+                html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                html2canvasScript.onload = () => {
+                    html2canvas(tempContainer, {
+                        scale: 2, // Mejor calidad
+                        backgroundColor: '#ffffff'
+                    }).then(canvas => {
+                        // Convertir canvas a imagen
+                        const image = canvas.toDataURL('image/png');
+
+                        // Crear enlace de descarga
+                        const link = document.createElement('a');
+                        link.download = `codigo-barras-${codigo}.png`;
+                        link.href = image;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        // Limpiar el contenedor temporal
+                        document.body.removeChild(tempContainer);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Imagen descargada',
+                            text: `El código de barras se ha descargado como "codigo-barras-${codigo}.png"`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    });
+                };
+                document.head.appendChild(html2canvasScript);
+            } else {
+                // Si la imagen no está cargada, esperar a que cargue
+                barcodeImage.onload = () => {
+                    descargarImagenBarcode();
+                };
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Cargando imagen...',
+                    text: 'Por favor espera un momento',
+                    timer: 1000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error al descargar:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al descargar',
+                text: 'No se pudo descargar la imagen del código de barras'
+            });
+        }
+    };
+
+    // Event listeners
+    btnCerrar.addEventListener('click', cerrarModal);
+    btnCerrar2.addEventListener('click', cerrarModal);
+
+    // Cerrar al hacer clic fuera del modal
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            cerrarModal();
+        }
+    });
+
+    // Event listener para imprimir
+    btnImprimir.addEventListener('click', () => {
+        window.imprimirCodigoBarras(codigo, nombre);
+    });
+
+    // Event listener para descargar
+    btnDescargar.addEventListener('click', descargarImagenBarcode);
 };
 
 // CORREGIDO - Función global de eliminar
