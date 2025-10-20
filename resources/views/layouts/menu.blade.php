@@ -11,6 +11,8 @@
     <!-- Fuente -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
+    <link rel="icon" href="{{ asset('images/LOGO_TIENDA.png') }}" type="image/png">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -30,7 +32,7 @@
                         <a href="{{ url('/dashboard') }}" class="text-lg font-bold text-gray-800 hover:text-emerald-600 transition">
                             Tienda Aprils
                         </a>
-                        <p class="text-xs text-gray-500 -mt-0.5">Sistema de</p>
+                        <p class="text-xs text-gray-500 -mt-0.5">Sistema de Control de Inventarios</p>
                     </div>
                 </div>
 
@@ -138,56 +140,6 @@
                         </div>
                     </div>
 
-                    <!-- Clientes -->
-                    <div class="relative group" data-menu="clientes">
-                        <button type="button"
-                            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition"
-                            aria-haspopup="true" aria-expanded="false" aria-controls="menu-clientes">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                            Clientes
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-
-                        <div id="menu-clientes"
-                            class="invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-40"
-                            role="menu" aria-label="Submenú Clientes">
-
-                            <a href="{{ url('/clientes') }}"
-                                class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 transition group" role="menuitem">
-                                <div class="p-1.5 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition">
-                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                </div>
-                                <span class="flex-1">Listado / Fiadores</span>
-                            </a>
-
-                            <a href="{{ url('/clientes/create') }}"
-                                class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 transition group" role="menuitem">
-                                <div class="p-1.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition">
-                                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                                    </svg>
-                                </div>
-                                <span class="flex-1">Nuevo Cliente</span>
-                            </a>
-
-                            <a href="{{ url('/clientes/segmentos') }}"
-                                class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 transition group" role="menuitem">
-                                <div class="p-1.5 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition">
-                                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>
-                                <span class="flex-1">Reporte de Ventas</span>
-                            </a>
-                        </div>
-                    </div>
-
                 </div>
 
                 <!-- USER Y LOGOUT -->
@@ -232,7 +184,7 @@
                     </div>
 
                     @auth
-                    <!-- Botón logout móvil -->
+
                     <form method="POST" action="{{ url('/logout') }}" class="md:hidden">
                         @csrf
                         <button type="submit"
@@ -242,7 +194,7 @@
                     </form>
                     @endauth
 
-                    <!-- BOTÓN MENÚ MÓVIL -->
+
                     <button id="mobileMenuBtn"
                         class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition" aria-controls="mobileMenu" aria-expanded="false">
                         <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,10 +205,8 @@
             </div>
         </div>
 
-        <!-- MENÚ MÓVIL (ACORDEONES) -->
         <div id="mobileMenu" class="hidden lg:hidden border-t border-emerald-100 bg-white">
             <div class="px-4 py-3 space-y-1">
-                <!-- Usuario en móvil -->
                 <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg mb-2">
                     <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-semibold">
                         {{ strtoupper(substr(Auth::user()->name ?? 'I', 0, 1)) }}
@@ -264,7 +214,6 @@
                     <span class="text-sm font-medium text-gray-700">{{ Auth::user()->name ?? 'Invitado' }}</span>
                 </div>
 
-                <!-- Productos -->
                 <div class="border border-gray-200 rounded-lg overflow-hidden">
                     <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-emerald-50"
                         data-accordion-btn="productos">
@@ -280,7 +229,6 @@
                     </div>
                 </div>
 
-                <!-- Ventas -->
                 <div class="border border-gray-200 rounded-lg overflow-hidden">
                     <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-emerald-50"
                         data-accordion-btn="ventas">
@@ -296,21 +244,6 @@
                     </div>
                 </div>
 
-                <!-- Clientes -->
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
-                    <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-emerald-50"
-                        data-accordion-btn="clientes">
-                        <span>Clientes</span>
-                        <svg class="w-4 h-4 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <div class="hidden flex-col" data-accordion-panel="clientes">
-                        <a href="{{ url('/clientes') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Listado / Fiadores</a>
-                        <a href="{{ url('/clientes/create') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Nuevo Cliente</a>
-                        <a href="{{ url('/clientes/segmentos') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Reporte de Ventas</a>
-                    </div>
-                </div>
 
                 <div class="border-t border-gray-200 my-2"></div>
 
@@ -358,7 +291,7 @@
                     </div>
                     <div class="text-left">
                         <p class="text-sm font-semibold text-gray-800">Tienda Aprils</p>
-                        <p class="text-xs text-gray-500">Sistema de</p>
+                        <p class="text-xs text-gray-500">Sistema de Control de Inventarios</p>
                     </div>
                 </div>
                 <p class="text-sm text-gray-600">&copy; {{ date('Y') }} Todos los derechos reservados.</p>

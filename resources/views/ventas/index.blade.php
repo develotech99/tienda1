@@ -1,6 +1,6 @@
-@extends('layouts.menu');
+@extends('layouts.menu')
 
-@section('title', 'Ventas');
+@section('title', 'Ventas')
 
 @section('content')
 
@@ -60,7 +60,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 font-medium">Productos Vendidos</p>
+                        <p class="text-xs text-gray-500 font-medium">Productos Vendidos Hoy</p>
                         <p class="text-xl font-bold text-gray-800" id="totalProductosVendidos">16</p>
                     </div>
                 </div>
@@ -312,4 +312,4 @@
 
 @endsection
 
-@vite('resources/js/ventas/index.js');
+@vite('resources/js/ventas/index.js')

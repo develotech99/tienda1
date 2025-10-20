@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductoTipoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportesController;
 use App\Http\Controllers\VentasController;
+use App\Http\Controllers\VentasGraficasController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -68,10 +69,23 @@ Route::middleware('auth')->group(function () {
         Route::post('buscarPorNombre', [VentasController::class, 'buscarPorNombre'])->name('buscar.nombre');
         Route::post('ventaAPI', [VentasController::class, 'ProcesarVenta'])->name('procesar.venta');
         Route::get('metricas-del-dia', [VentasController::class, 'obtenerMetricasDelDia']);
-    });
 
-    Route::prefix('ventas/historial')->name('ventas.historial.')->group(function(){
-        Route::get('/', [CajaHistorialController::class, 'index'])->name('index');
+        //CAJA E HISTORIAL 
+        Route::prefix('historial')->name('historial.')->group(function () {
+            Route::get('/', [CajaHistorialController::class, 'index'])->name('index');
+            Route::get('/datos', [CajaHistorialController::class, 'obtenerDatos'])->name('datos');
+            Route::post('/ingreso', [CajaHistorialController::class, 'registrarIngreso'])->name('ingreso');
+            Route::post('/egreso', [CajaHistorialController::class, 'registrarEgreso'])->name('egreso');
+            Route::delete('/movimiento', [CajaHistorialController::class, 'eliminarMovimiento'])->name('eliminar');
+            Route::get('/detalle-venta/{id}', [CajaHistorialController::class, 'obtenerDetalleVenta'])->name('detalle-venta');
+        });
+
+        //VENTAS GRAFICAS
+        //VENTAS GRAFICAS
+        Route::prefix('reportes')->name('reportes.')->group(function () {
+            Route::get('/', [VentasGraficasController::class, 'index'])->name('index');
+            Route::get('/datos-graficas', [VentasGraficasController::class, 'obtenerDatosGraficas'])->name('datos-graficas');
+        });
     });
 });
 

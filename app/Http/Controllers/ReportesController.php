@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\ProductoTipo;
 use App\Models\StockMovimiento;
+use App\Models\VentasDetalle;
+use App\Models\Ventas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -21,7 +23,6 @@ class ReportesController extends Controller
         return view('productos.reportes', compact('tipos'));
     }
 
-    // Obtener estadísticas generales
     public function obtenerEstadisticas()
     {
         try {
@@ -56,7 +57,6 @@ class ReportesController extends Controller
         }
     }
 
-    // Obtener productos clasificados por niveles de stock
     public function obtenerStockClasificado(Request $request)
     {
         try {
@@ -67,15 +67,13 @@ class ReportesController extends Controller
                 $query->where('tprod_id', $request->categoria);
             }
 
-            $productos = $query->orderBy('prod_stock_actual', 'asc')
-                ->get();
+            $productos = $query->orderBy('prod_stock_actual', 'asc')->get();
 
-            // Clasificar productos por niveles de stock
             $clasificados = [
-                'criticos' => [], // Stock = 0
-                'bajos' => [],    // Stock > 0 y <= mínimo
-                'medios' => [],   // Stock > mínimo y <= 2*mínimo  
-                'altos' => []     // Stock > 2*mínimo
+                'criticos' => [],
+                'bajos' => [],
+                'medios' => [],
+                'altos' => []
             ];
 
             foreach ($productos as $producto) {
@@ -107,13 +105,13 @@ class ReportesController extends Controller
         }
     }
 
-    // Obtener movimientos recientes
+
     public function obtenerMovimientos(Request $request)
     {
         try {
             $query = StockMovimiento::with('producto.tipo')
                 ->orderBy('created_at', 'desc')
-                ->limit(50);
+                ->limit(100);
 
             if ($request->has('fecha_desde') && $request->fecha_desde != '') {
                 $query->whereDate('created_at', '>=', $request->fecha_desde);
@@ -144,32 +142,40 @@ class ReportesController extends Controller
         }
     }
 
-    // Obtener productos más vendidos
+
     public function obtenerMasVendidos(Request $request)
     {
         try {
-            $query = StockMovimiento::with('producto.tipo')
-                ->select('prod_id', DB::raw('SUM(mov_cantidad) as total_vendido'))
-                ->where('mov_tipo', 'Salida')
-                ->groupBy('prod_id')
-                ->orderBy('total_vendido', 'desc')
-                ->limit(20);
+            $query = VentasDetalle::join('ventas', 'venta_detalles.ven_id', '=', 'ventas.ven_id')
+                ->join('productos', 'venta_detalles.prod_id', '=', 'productos.prod_id')
+                ->where('ventas.ven_estado', 'Activa')
+                ->select(
+                    'productos.prod_id',
+                    DB::raw('SUM(venta_detalles.vendet_cantidad) as total_vendido'),
+                    DB::raw('SUM(venta_detalles.vendet_total) as total_ingresos'),
+                    DB::raw('COUNT(DISTINCT ventas.ven_id) as num_ventas')
+                )
+                ->groupBy('productos.prod_id');
 
             if ($request->has('fecha_desde') && $request->fecha_desde != '') {
-                $query->whereDate('created_at', '>=', $request->fecha_desde);
+                $query->whereDate('ventas.ven_fecha', '>=', $request->fecha_desde);
             }
 
             if ($request->has('fecha_hasta') && $request->fecha_hasta != '') {
-                $query->whereDate('created_at', '<=', $request->fecha_hasta);
+                $query->whereDate('ventas.ven_fecha', '<=', $request->fecha_hasta);
             }
 
             if ($request->has('categoria') && $request->categoria != '') {
-                $query->whereHas('producto', function ($q) use ($request) {
-                    $q->where('tprod_id', $request->categoria);
-                });
+                $query->where('productos.tprod_id', $request->categoria);
             }
 
-            $masVendidos = $query->get();
+            $masVendidos = $query->orderByDesc('total_vendido')
+                ->limit(20)
+                ->get();
+
+            $masVendidos->each(function ($item) {
+                $item->producto = Producto::with('tipo')->find($item->prod_id);
+            });
 
             return response()->json([
                 'success' => true,
@@ -184,7 +190,6 @@ class ReportesController extends Controller
         }
     }
 
-    // Obtener productos sin stock
     public function obtenerSinStock(Request $request)
     {
         try {
@@ -196,8 +201,7 @@ class ReportesController extends Controller
                 $query->where('tprod_id', $request->categoria);
             }
 
-            $productos = $query->orderBy('prod_nombre')
-                ->get();
+            $productos = $query->orderBy('prod_nombre')->get();
 
             return response()->json([
                 'success' => true,
@@ -212,7 +216,6 @@ class ReportesController extends Controller
         }
     }
 
-    // Nuevo método para historial de producto
     public function historialProducto(Request $request)
     {
         try {
@@ -220,7 +223,6 @@ class ReportesController extends Controller
                 'prod_id' => 'required|exists:productos,prod_id'
             ]);
 
-            // Ventana por defecto: últimos 30 días (evita saturar el modal)
             $desde = $request->filled('fecha_desde')
                 ? Carbon::parse($request->fecha_desde)->startOfDay()
                 : Carbon::now()->subDays(30)->startOfDay();
@@ -229,19 +231,42 @@ class ReportesController extends Controller
                 ? Carbon::parse($request->fecha_hasta)->endOfDay()
                 : Carbon::now()->endOfDay();
 
-            $movimientos = StockMovimiento::with('producto.tipo')
-                ->where('prod_id', $request->prod_id)
+            // 1. Movimientos de inventario (Entradas/Salidas manuales)
+            $movimientos = StockMovimiento::where('prod_id', $request->prod_id)
                 ->whereBetween('created_at', [$desde, $hasta])
                 ->orderBy('created_at', 'desc')
-                ->get(); // ya no hace falta limit(100) si acotas por fecha
+                ->get();
 
+            // 2. Ventas del producto
+            $ventas = VentasDetalle::with(['venta.usuario', 'venta.caja'])
+                ->whereHas('venta', function($q) use ($desde, $hasta) {
+                    $q->where('ven_estado', 'Activa')
+                      ->whereBetween('ven_fecha', [$desde->format('Y-m-d'), $hasta->format('Y-m-d')]);
+                })
+                ->where('prod_id', $request->prod_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // 3. Información del producto
             $producto = Producto::with('tipo')->find($request->prod_id);
+
+            // 4. Calcular estadísticas
+            $estadisticas = [
+                'total_vendido' => $ventas->sum('vendet_cantidad'),
+                'ingresos_generados' => $ventas->sum('vendet_total'),
+                'num_ventas' => $ventas->count(),
+                'entradas_inventario' => $movimientos->where('mov_tipo', 'Entrada')->sum('mov_cantidad'),
+                'salidas_inventario' => $movimientos->where('mov_tipo', 'Salida')->sum('mov_cantidad'),
+            ];
 
             return response()->json([
                 'success' => true,
-                'movimientos' => $movimientos,
                 'producto' => $producto,
-                'total' => $movimientos->count(),
+                'movimientos' => $movimientos,
+                'ventas' => $ventas,
+                'estadisticas' => $estadisticas,
+                'total_movimientos' => $movimientos->count(),
+                'total_ventas' => $ventas->count(),
                 'rango' => [
                     'desde' => $desde->toDateString(),
                     'hasta' => $hasta->toDateString(),
@@ -255,8 +280,6 @@ class ReportesController extends Controller
         }
     }
 
-
-    // Método para buscar producto por código (para scanner)
     public function buscarProductoCodigo(Request $request)
     {
         try {
@@ -290,20 +313,19 @@ class ReportesController extends Controller
         }
     }
 
-    // Método para exportar stock a PDF
     public function exportarStock(Request $request)
     {
         try {
             $query = Producto::with('tipo')
                 ->where('prod_situacion', 'Activo')
                 ->orderByRaw("
-                CASE
-                    WHEN prod_stock_actual = 0 THEN 1
-                    WHEN prod_stock_actual > 0 AND prod_stock_actual <= prod_stock_minimo THEN 2
-                    WHEN prod_stock_actual > prod_stock_minimo AND prod_stock_actual <= prod_stock_minimo * 2 THEN 3
-                    ELSE 4
-                END
-            ")
+                    CASE
+                        WHEN prod_stock_actual = 0 THEN 1
+                        WHEN prod_stock_actual > 0 AND prod_stock_actual <= prod_stock_minimo THEN 2
+                        WHEN prod_stock_actual > prod_stock_minimo AND prod_stock_actual <= prod_stock_minimo * 2 THEN 3
+                        ELSE 4
+                    END
+                ")
                 ->orderBy('prod_stock_actual', 'asc')
                 ->orderBy('prod_nombre', 'asc');
 
@@ -318,16 +340,16 @@ class ReportesController extends Controller
             if ($formato === 'pdf') {
                 $pdf = Pdf::loadView('productos.reportes.pdf.stock', [
                     'productos' => $productos,
-                    'filtros'   => $request->all(),
-                    'fecha'     => Carbon::now()
+                    'filtros' => $request->all(),
+                    'fecha' => Carbon::now()
                 ]);
 
                 return $pdf->download('reporte-stock-' . Carbon::now()->format('Y-m-d') . '.pdf');
             } else {
                 return response()->json([
-                    'success'   => true,
+                    'success' => true,
                     'productos' => $productos,
-                    'formato'   => $formato
+                    'formato' => $formato
                 ]);
             }
         } catch (\Exception $e) {

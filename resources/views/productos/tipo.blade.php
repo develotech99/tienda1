@@ -1,6 +1,6 @@
-@extends('layouts.menu');
+@extends('layouts.menu')
 
-@section('title', 'Categoria de Productos');
+@section('title', 'Categoria de Productos')
 
 @section('content')
 <div class="space-y-6">

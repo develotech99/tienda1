@@ -13,6 +13,8 @@ export default defineConfig({
                 'resources/js/productos/crear.js', 
                 'resources/js/productos/reportes.js', 
                 'resources/js/ventas/index.js', 
+                'resources/js/ventas/caja.js', 
+                'resources/js/ventas/reportes-graficas.js', 
             ],
             refresh: true,
         }),
