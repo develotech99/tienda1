@@ -5,116 +5,34 @@
 @section('content')
 
 <style>
-    /* ESTILOS RESPONSIVE PARA DATATABLES */
+    /* SOLO SCROLL HORIZONTAL PARA DATATABLES */
     .dataTables_wrapper {
-        width: 100% !important;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Scroll horizontal para tablas en móviles */
-    .dataTables_scroll {
-        overflow-x: auto !important;
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Asegurar que las tablas tengan un ancho mínimo en móviles */
     .dataTable {
         width: 100% !important;
-        min-width: 600px;
+        min-width: 800px;
+        /* Fuerza scroll en móviles */
     }
 
-    /* Responsive para móviles */
-    @media (max-width: 768px) {
-
-        .dataTables_wrapper .dataTables_length,
-        .dataTables_wrapper .dataTables_filter {
-            text-align: left !important;
-            margin-bottom: 10px;
-        }
-
-        .dataTables_wrapper .dataTables_filter input {
-            width: 100% !important;
-            margin-left: 0 !important;
-            margin-top: 5px !important;
-        }
-
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            padding: 4px 8px !important;
-            margin: 2px !important;
-            font-size: 12px !important;
-        }
-
-        .dataTables_wrapper .dataTables_info {
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-
-        /* Reducir padding en móviles */
-        .dataTable th,
-        .dataTable td {
-            padding: 6px 8px !important;
-            font-size: 13px;
-        }
+    /* BOTONES SIEMPRE VISIBLES */
+    .flex.gap-2 button span {
+        display: inline !important;
+        /* Forzar que el texto siempre se vea */
     }
 
     @media (max-width: 640px) {
-        .container {
-            padding-left: 12px !important;
-            padding-right: 12px !important;
-        }
-
         .dataTable {
-            min-width: 500px;
-        }
-
-        /* Ajustes generales de layout */
-        .grid.grid-cols-2.md\\:grid-cols-4 {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 8px;
-        }
-
-        .bg-white.rounded-xl.p-4 {
-            padding: 12px !important;
-        }
-
-        .text-lg {
-            font-size: 1rem !important;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .dataTable {
-            min-width: 400px;
-        }
-
-        /* Header responsive */
-        .flex-col.sm\\:flex-row {
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .flex.gap-2 {
-            width: 100%;
-            justify-content: space-between;
-        }
-
-        .flex.gap-2 button {
-            flex: 1;
-            font-size: 14px;
-            padding: 8px 12px;
-        }
-
-        /* Filtros responsive */
-        .grid.grid-cols-1.md\\:grid-cols-4 {
-            grid-template-columns: 1fr !important;
-            gap: 12px;
-        }
-
-        .flex.items-end button {
-            margin-top: 8px;
-        }
-
-        /* Estadísticas en 2 columnas */
-        .grid.grid-cols-2.md\\:grid-cols-4 {
-            grid-template-columns: repeat(2, 1fr) !important;
+            min-width: 700px;
         }
     }
 </style>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CajaHistorialController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProductoTipoController;
 use App\Http\Controllers\ProfileController;
@@ -13,11 +14,13 @@ Route::get('/', function () {
     return view('auth/login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
 Route::middleware('auth')->group(function () {
+
+    //DASHBOARD PRINCIPAL
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('index');
+        Route::get('estadisticas', [DashboardController::class, 'apiEstadisticas'])->name('dashboard.estadisticas');
+    });
 
     //EDITAR PERFIL CON LA SESSION INICIADA
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -80,7 +83,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/detalle-venta/{id}', [CajaHistorialController::class, 'obtenerDetalleVenta'])->name('detalle-venta');
         });
 
-        //VENTAS GRAFICAS
         //VENTAS GRAFICAS
         Route::prefix('reportes')->name('reportes.')->group(function () {
             Route::get('/', [VentasGraficasController::class, 'index'])->name('index');
