@@ -21,6 +21,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'telefono',
+        'rol',
+        'photo', // Solo agregamos este campo
     ];
 
     /**
@@ -44,5 +47,26 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function esAdmin(): bool
+    {
+        return $this->rol === 'admin';
+    }
+
+    public function esVendedor(): bool
+    {
+        return $this->rol === 'vendedor';
+    }
+
+    // Scope para filtrar por rol
+    public function scopeAdmins($query)
+    {
+        return $query->where('rol', 'admin');
+    }
+
+    public function scopeVendedores($query)
+    {
+        return $query->where('rol', 'vendedor');
     }
 }

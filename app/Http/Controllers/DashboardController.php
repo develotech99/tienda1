@@ -11,33 +11,72 @@ use App\Models\StockMovimiento;
 use App\Models\ProductoTipo;
 use App\Models\Caja;
 use App\Models\Caja_movimientos;
+use Exception;
 
 class DashboardController extends Controller
 {
     public function index()
     {
         try {
-            // Obtener estadísticas en tiempo real
-            $estadisticas = $this->obtenerEstadisticas();
-            $actividadReciente = $this->obtenerActividadReciente();
-            $alertasStock = $this->obtenerAlertasStock();
-            $ventasSemana = $this->obtenerVentasSemana();
-
-            return view('dashboard', compact(
-                'estadisticas',
-                'actividadReciente',
-                'alertasStock',
-                'ventasSemana'
-            ));
-        } catch (\Exception $e) {
-            // En caso de error, mostrar datos vacíos
-            return view('dashboard', [
-                'estadisticas' => $this->estadisticasVacias(),
-                'actividadReciente' => [],
-                'alertasStock' => [],
-                'ventasSemana' => []
-            ]);
+            if (auth()->user()->esAdmin()) {
+                return $this->dashboardAdmin();
+            } else {
+                return $this->dashboardVendedor();
+            }
+        } catch (Exception $e) {
+            // Fallback para ambos roles
+            if (auth()->user()->esAdmin()) {
+                return view('dashboard.admin', [
+                    'estadisticas' => $this->estadisticasVacias(),
+                    'actividadReciente' => [],
+                    'alertasStock' => [],
+                    'ventasSemana' => []
+                ]);
+            } else {
+                return view('dashboard.vendedor', [
+                    'ventasHoy' => ['total' => 0, 'transacciones' => 0]
+                ]);
+            }
         }
+    }
+
+    private function dashboardAdmin()
+    {
+        $estadisticas = $this->obtenerEstadisticas();
+        $actividadReciente = $this->obtenerActividadReciente();
+        $alertasStock = $this->obtenerAlertasStock();
+        $ventasSemana = $this->obtenerVentasSemana();
+
+        return view('dashboard.admin', compact(
+            'estadisticas',
+            'actividadReciente',
+            'alertasStock',
+            'ventasSemana'
+        ));
+    }
+
+    private function dashboardVendedor()
+    {
+        $ventasHoy = $this->obtenerVentasHoy();
+        return view('dashboard.vendedor', compact('ventasHoy'));
+    }
+
+    private function obtenerVentasHoy()
+    {
+        $hoy = Carbon::today();
+        
+        $totalVentas = Ventas::whereDate('ven_fecha', $hoy)
+            ->where('ven_estado', 'Activa')
+            ->sum('ven_total') ?? 0;
+
+        $transacciones = Ventas::whereDate('ven_fecha', $hoy)
+            ->where('ven_estado', 'Activa')
+            ->count();
+
+        return [
+            'total' => $totalVentas,
+            'transacciones' => $transacciones
+        ];
     }
 
     private function obtenerEstadisticas()
@@ -261,9 +300,9 @@ class DashboardController extends Controller
                 'estadisticas' => $this->obtenerEstadisticas(),
                 'ventas_semana' => $this->obtenerVentasSemana(),
                 'alertas_stock' => $this->obtenerAlertasStock(),
-                'actividad_reciente' => $this->obtenerActividadReciente() 
+                'actividad_reciente' => $this->obtenerActividadReciente()
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estadísticas: ' . $e->getMessage()

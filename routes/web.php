@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProductoTipoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportesController;
+use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\VentasController;
 use App\Http\Controllers\VentasGraficasController;
 use Illuminate\Support\Facades\Route;
@@ -22,10 +23,15 @@ Route::middleware('auth')->group(function () {
         Route::get('estadisticas', [DashboardController::class, 'apiEstadisticas'])->name('dashboard.estadisticas');
     });
 
-    //EDITAR PERFIL CON LA SESSION INICIADA
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Rutas de perfil 
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.update.photo');
+
+    // Rutas de contraseña
+    Route::get('/profile/password', [ProfileController::class, 'showChangePassword'])->name('password.change');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+
 
     //PRODUCTOS
     Route::prefix('productos')->name('productos.')->group(function () {
@@ -88,6 +94,15 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [VentasGraficasController::class, 'index'])->name('index');
             Route::get('/datos-graficas', [VentasGraficasController::class, 'obtenerDatosGraficas'])->name('datos-graficas');
         });
+    });
+
+    //USUARIOS
+    Route::prefix('usuarios')->name('usuarios.')->group(function () {
+        Route::get('/', [UsuariosController::class, 'index'])->name('index');
+        Route::get('obtener-datos', [UsuariosController::class, 'obtenerDatos'])->name('obtener-datos');
+        Route::post('guardar', [UsuariosController::class, 'guardar'])->name('guardar');
+        Route::put('actualizar', [UsuariosController::class, 'actualizar'])->name('actualizar');
+        Route::delete('eliminar', [UsuariosController::class, 'eliminar'])->name('eliminar');
     });
 });
 

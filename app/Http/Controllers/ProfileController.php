@@ -2,59 +2,85 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
-    public function edit(Request $request): View
+    public function edit()
     {
-        return view('profile.edit', [
-            'user' => $request->user(),
-        ]);
+        $user = Auth::user();
+        return view('profile.edit', compact('user'));
     }
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request)
     {
-        $request->user()->fill($request->validated());
+        $user = Auth::user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'telefono' => 'nullable|string|max:20',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'telefono' => $request->telefono,
+        ]);
+
+        return back()->with('success', 'Perfil actualizado correctamente.');
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        $user = Auth::user();
+
+        // Eliminar foto anterior si existe
+        if ($user->photo && Storage::exists('public/' . $user->photo)) {
+            Storage::delete('public/' . $user->photo);
         }
 
-        $request->user()->save();
+        // Guardar nueva foto
+        $photoPath = $request->file('photo')->store('profile-photos', 'public');
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
-    }
-
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+        $user->update([
+            'photo' => $photoPath,
         ]);
 
-        $user = $request->user();
+        return response()->json([
+            'success' => true,
+            'photo_url' => Storage::url($photoPath),
+            'message' => 'Foto de perfil actualizada correctamente.'
+        ]);
+    }
 
-        Auth::logout();
+    public function showChangePassword()
+    {
+        return view('profile.change-password');
+    }
 
-        $user->delete();
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|confirmed', 
+        ]);
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $user = Auth::user();
 
-        return Redirect::to('/');
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta.']);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return back()->with('success', 'Contraseña actualizada correctamente.');
     }
 }

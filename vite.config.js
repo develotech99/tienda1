@@ -16,6 +16,7 @@ export default defineConfig({
                 'resources/js/ventas/index.js', 
                 'resources/js/ventas/caja.js', 
                 'resources/js/ventas/reportes-graficas.js', 
+                'resources/js/usuarios/usuarios.js', 
             ],
             refresh: true,
         }),
