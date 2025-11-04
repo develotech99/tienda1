@@ -1,58 +1,58 @@
-# SO / editor / IDE
+# ==========================================
+# 🧱 Dependencias
+# ==========================================
+/node_modules
+/vendor
+
+# ==========================================
+# ⚙️ Archivos de configuración y sistema
+# ==========================================
 *.log
 .DS_Store
 Thumbs.db
 /.idea
 /.vscode
-/.fleet
-/.nova
-/.phpunit.cache
-/.zed
-.phpunit.result.cache
-.phpactor.json
-auth.json
 
-# Entornos
+# ==========================================
+# 🔐 Archivos de entorno (variables y claves)
+# ==========================================
 .env
 .env.*
-!.env.example
-.env.backup
-.env.production
+*.key
+*.pem
 
-# Dependencias
-/node_modules
-/vendor
-
-# Builds (Vite / Mix) y archivos generados
+# ==========================================
+# 🗂️ Archivos y carpetas públicas generadas
+# ==========================================
+/public/storage
 /public/build
 /public/hot
-/public/mix-manifest.json
 
-# Storage (claves, pail, caches) y symlink público
+# ==========================================
+# 💾 Archivos de almacenamiento interno
+# ==========================================
 /storage/*.key
 /storage/pail
-/storage/debugbar
-/storage/logs
-/storage/framework/*
-!/storage/framework/.gitignore
-/public/storage
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
 
-# Subidas de imágenes (ajusta rutas según tu app)
-public/uploads/
-public/images/uploads/
-storage/app/public/
-storage/app/private/
+# ==========================================
+# 🧪 Testing y caché
+# ==========================================
+.phpunit.result.cache
+/bootstrap/cache/*
 
-# (opcional) Ignora screenshots o dumps locales
-/tmp/
-*.sql
-*.sqlite
-
-# Homestead (si aplica)
+# ==========================================
+# 🏠 Archivos de Homestead (entorno local)
+# ==========================================
 Homestead.json
 Homestead.yaml
 
+# ==========================================
+# 📦 Archivos de bloqueo de dependencias
+# ==========================================
 composer.lock
 package-lock.json
-yarn.lock
-pnpm-lock.yaml

@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Container\Attributes\DB;
+use Illuminate\Support\Facades\DB;  
 use Illuminate\Database\Seeder;
 
 class CajaSeeder extends Seeder
