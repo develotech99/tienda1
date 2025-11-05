@@ -31,13 +31,13 @@
                 <div class="flex items-center gap-3">
                     <div
                         class="h-10 w-10 rounded-lg bg-white shadow-sm ring-1 ring-emerald-200 flex items-center justify-center p-1.5">
-                        <img src="{{ asset('images/LOGO_TIENDA.png') }}" class="h-full w-full object-contain"
+                        <img src="{{ asset('images/LOGO_TIENDA.jpg') }}" class="h-full w-full object-contain"
                             alt="Tienda Aprils">
                     </div>
                     <div class="hidden sm:block">
                         <a href="{{ url('/dashboard') }}"
                             class="text-lg font-bold text-gray-800 hover:text-emerald-600 transition">
-                            Tienda Aprils
+                            Inventario Demo
                         </a>
                         <p class="text-xs text-gray-500 -mt-0.5">Sistema de Control de Inventarios</p>
                     </div>

@@ -36,14 +36,14 @@
                         <div class="inline-flex items-center gap-3">
                             <div class="flex justify-center mb-6">
                                 <img
-                                    src="{{ asset('images/LOGO_TIENDA.png') }}"
+                                    src="{{ asset('images/LOGO_TIENDA.jpg') }}"
                                     alt="Tienda Aprils"
                                     class="h-16 w-16 rounded-xl bg-white p-1 shadow-sm ring-1 ring-emerald-900/10 object-contain"
                                     loading="eager"
                                     decoding="async">
                         </div>
                         <div>
-                            <h1 class="text-3xl font-bold tracking-tight text-gray-800">Tienda Aprils</h1>
+                            <h1 class="text-3xl font-bold tracking-tight text-gray-800">Inventario demo</h1>
                             <p class="text-sm text-gray-500">Sistema de Gestión</p>
                         </div>
                     </div>
